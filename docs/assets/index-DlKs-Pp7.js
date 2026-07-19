@@ -92,11 +92,10 @@
         <aside class="info-box">
           <h3>Darstellung des Optimierungsverlaufs</h3>
           <p>
-            Die Punkte zeigen die bewerteten Entwürfe. Grau kennzeichnet unzulässige
-            Entwürfe mit nicht erfüllten Nachweisen, blaue Punkte kennzeichnen
-            zulässige Entwürfe, die alle Nachweise erfüllen. Die rote Linie zeigt das
-            niedrigste Treibhausgaspotenzial der bis zur jeweiligen Iteration
-            gefundenen zulässigen Entwürfe.
+            Graue Punkte kennzeichnen unzulässige Entwürfe mit nicht erfüllten
+            Nachweisen, blaue Punkte kennzeichnen zulässige Entwürfe, die alle
+            Nachweise erfüllen. Die rote Linie zeigt das bis dato niedrigste
+            Treibhausgaspotenzial der gefundenen zulässigen Entwürfe.
           </p>
         </aside>
       </div>
