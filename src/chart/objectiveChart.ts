@@ -50,7 +50,17 @@ export function createObjectiveChart(el: HTMLElement) {
     height: 260,
     padding: [10, 12, 8, 8],
     scales: {
-      x: { time: false },
+      x: {
+        time: false,
+        auto: false,
+        // Keep 1…10 until enough iterations exist; avoids odd zoom with few points.
+        range: (_u, _dataMin, dataMax) => {
+          if (!Number.isFinite(dataMax) || (dataMax as number) < 10) {
+            return [1, 10]
+          }
+          return [1, dataMax as number]
+        },
+      },
       y: {
         auto: false,
         range: [0, Y_MAX],
