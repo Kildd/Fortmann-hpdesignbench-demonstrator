@@ -3,14 +3,16 @@ import 'uplot/dist/uPlot.min.css'
 
 export type ChartPoint = {
   trial: number
-  /** Objective value of the current iteration (optimizer metric). */
-  current: number | null
-  /** Best-so-far objective value. */
-  best: number | null
+  /** Physical objective y (not penalized y_p). */
+  y: number | null
+  feasible: boolean
+  /** Running best physical y among feasible designs so far, or null. */
+  bestFeasibleY: number | null
 }
 
 const Y_MAX = 1000
 const X_MIN_SPAN = 10
+const UNIT_CO2 = 'kg CO₂-Äq./m²'
 
 function clampY(v: number | null): number | null {
   if (v == null || !Number.isFinite(v)) return null
@@ -35,16 +37,17 @@ function drawUpArrow(
 }
 
 export function createObjectiveChart(el: HTMLElement) {
+  /** x, feasible y, infeasible y, bestFeasible step */
   const data: [
     number[],
     (number | null | undefined)[],
     (number | null | undefined)[],
-  ] = [[], [], []]
+    (number | null | undefined)[],
+  ] = [[], [], [], []]
 
-  /** Raw values (unclamped) for overflow markers. */
-  const rawCurrent: (number | null)[] = []
+  const rawY: (number | null)[] = []
+  const feasibleFlags: boolean[] = []
   const rawBest: (number | null)[] = []
-  let bestValue: number | null = null
 
   const opts: uPlot.Options = {
     width: el.clientWidth || 480,
@@ -53,8 +56,6 @@ export function createObjectiveChart(el: HTMLElement) {
     scales: {
       x: {
         time: false,
-        // Must be a function: a fixed [1, 10] array is reapplied on every
-        // setData/setScale and permanently locks the axis.
         range: (_u, _min, max) => {
           if (max == null || !Number.isFinite(max)) return [1, X_MIN_SPAN]
           return [1, Math.max(X_MIN_SPAN, max)]
@@ -68,13 +69,31 @@ export function createObjectiveChart(el: HTMLElement) {
     series: [
       {},
       {
-        label: 'Aktuelle Iteration',
-        stroke: '#1f91cc',
-        width: 2,
-        points: { show: false },
+        label: 'Zulässiger Entwurf',
+        stroke: 'rgba(0,0,0,0)',
+        width: 0,
+        points: {
+          show: true,
+          size: 7,
+          width: 1,
+          stroke: '#1f91cc',
+          fill: '#1f91cc',
+        },
       },
       {
-        label: 'Bestes Ergebnis',
+        label: 'Nicht zulässiger Entwurf',
+        stroke: 'rgba(0,0,0,0)',
+        width: 0,
+        points: {
+          show: true,
+          size: 7,
+          width: 1,
+          stroke: '#b8c0c4',
+          fill: '#c5c9cd',
+        },
+      },
+      {
+        label: 'Bester zulässiger Entwurf',
         stroke: '#c40d20',
         width: 2,
         points: { show: false },
@@ -92,9 +111,9 @@ export function createObjectiveChart(el: HTMLElement) {
         values: (_u, splits) => splits.map((v) => String(Math.round(v))),
       },
       {
-        label: 'kg CO₂-äquivalent/m²',
+        label: UNIT_CO2,
         labelSize: 18,
-        size: 72,
+        size: 78,
         stroke: '#434343',
         grid: { stroke: 'rgba(67,67,67,0.12)' },
         ticks: { stroke: 'rgba(67,67,67,0.2)' },
@@ -116,15 +135,17 @@ export function createObjectiveChart(el: HTMLElement) {
           const top = bbox.top
           ctx.save()
           for (let i = 0; i < data[0].length; i++) {
-            const xVal = data[0][i]
-            const x = u.valToPos(xVal, 'x', true)
-            const cur = rawCurrent[i]
-            const best = rawBest[i]
-            if (cur != null && cur > Y_MAX) {
-              drawUpArrow(ctx, x - 3, top + 1, '#1f91cc')
-            }
-            if (best != null && best > Y_MAX) {
-              drawUpArrow(ctx, x + 3, top + 1, '#c40d20')
+            const yVal = rawY[i]
+            if (yVal == null || yVal <= Y_MAX) continue
+            const x = u.valToPos(data[0][i], 'x', true)
+            const color = feasibleFlags[i] ? '#1f91cc' : '#a8adb2'
+            drawUpArrow(ctx, x, top + 1, color)
+          }
+          for (let i = 0; i < data[0].length; i++) {
+            const b = rawBest[i]
+            if (b != null && b > Y_MAX) {
+              const x = u.valToPos(data[0][i], 'x', true)
+              drawUpArrow(ctx, x + 4, top + 1, '#c40d20')
             }
           }
           ctx.restore()
@@ -145,18 +166,21 @@ export function createObjectiveChart(el: HTMLElement) {
       data[0] = []
       data[1] = []
       data[2] = []
-      rawCurrent.length = 0
+      data[3] = []
+      rawY.length = 0
+      feasibleFlags.length = 0
       rawBest.length = 0
-      bestValue = null
       plot.setData(data)
     },
     push(p: ChartPoint) {
-      if (p.best != null && Number.isFinite(p.best)) bestValue = p.best
+      const clamped = clampY(p.y)
       data[0].push(p.trial + 1)
-      data[1].push(clampY(p.current))
-      data[2].push(clampY(bestValue))
-      rawCurrent.push(p.current)
-      rawBest.push(bestValue)
+      data[1].push(p.feasible ? clamped : null)
+      data[2].push(p.feasible ? null : clamped)
+      data[3].push(clampY(p.bestFeasibleY))
+      rawY.push(p.y)
+      feasibleFlags.push(p.feasible)
+      rawBest.push(p.bestFeasibleY)
       plot.setData(data)
     },
     destroy() {

@@ -122,15 +122,21 @@ function renderStats(el: HTMLElement | null | undefined, g: GeometryState | null
 
   const items: [string, string][] = [
     ['Querschnittshöhe', Number.isFinite(hGes) ? `${fmtVal(hGes, 0)} mm` : '–'],
-    ['Querschnittsdicke', Number.isFinite(t) ? `${fmtVal(t, 0)} mm` : '–'],
+    ['Schalendicke', Number.isFinite(t) ? `${fmtVal(t, 0)} mm` : '–'],
     [
-      'Anzahl Spannglieder',
+      'Anzahl der Spannglieder',
       Number.isFinite(nt) ? `${nt} je Seite` : '–',
     ],
-    ['Randabstand Spannglieder', Number.isFinite(dy) ? `${fmtVal(dy, 0)} mm` : '–'],
-    ['Betongüte', Number.isFinite(fck) ? concreteClassLabel(fck) : '–'],
     [
-      'Vorspanngrad Spannglieder',
+      'Randabstand der Spannglieder',
+      Number.isFinite(dy) ? `${fmtVal(dy, 0)} mm` : '–',
+    ],
+    [
+      'Betonfestigkeitsklasse',
+      Number.isFinite(fck) ? concreteClassLabel(fck) : '–',
+    ],
+    [
+      'Vorspanngrad der Spannglieder',
       Number.isFinite(kap) ? `${fmtVal(kap, 0)} %` : '–',
     ],
   ]

@@ -14,10 +14,25 @@ import argparse
 import contextlib
 import io
 import json
+import math
 import sys
 import traceback
 from pathlib import Path
 from typing import Any
+
+FEAS_TOL = 1e-9
+
+
+def _is_feasible(util: dict[str, float], err: str | None) -> bool:
+    """True only if every returned constraint utilization is finite and ≤ 1."""
+    if err is not None:
+        return False
+    if not util:
+        return False
+    for v in util.values():
+        if not math.isfinite(v) or v > 1.0 + FEAS_TOL:
+            return False
+    return True
 
 ENGINE_ROOT = Path(__file__).resolve().parent
 VENDOR_ROOT = ENGINE_ROOT / "vendor"
@@ -178,7 +193,8 @@ def _evaluate_one(
     materials: dict,
     constraints: dict,
     best: dict[str, Any] | None,
-) -> tuple[float, dict[str, Any], dict[str, Any] | None]:
+    best_feasible: dict[str, Any] | None,
+) -> tuple[float, dict[str, Any], dict[str, Any] | None, dict[str, Any] | None]:
     params = decode(x)
     try:
         sink = io.StringIO()
@@ -197,38 +213,51 @@ def _evaluate_one(
         err = f"{type(exc).__name__}: {exc}"
         params = dict(params)
 
+    feasible = _is_feasible(util, err)
     decoded_vars = {name: params.get(name) for name in var_names}
+    geometry = _geometry_payload(params)
+    design = {
+        "trial": trial,
+        "y": y,
+        "y_p": y_p,
+        "vars": decoded_vars,
+        "penalties": penalties,
+        "utilizations": util,
+        "geometry": geometry,
+        "is_feasible": feasible,
+    }
+
     payload: dict[str, Any] = {
         "type": "trial",
         "trial": trial,
         "x": x,
         "vars": decoded_vars,
-        "y": y if y != float("inf") else None,
-        "y_p": y_p if y_p != float("inf") else None,
+        "y": y if math.isfinite(y) else None,
+        "y_p": y_p if math.isfinite(y_p) else None,
         "penalties": penalties,
         "utilizations": util,
         "error": err,
-        "geometry": _geometry_payload(params),
+        "geometry": geometry,
+        "is_feasible": feasible,
     }
 
-    is_best = best is None or (y_p < best["y_p"])
-    if is_best and y_p != float("inf"):
-        best = {
-            "trial": trial,
-            "y": y,
-            "y_p": y_p,
-            "vars": decoded_vars,
-            "penalties": penalties,
-            "utilizations": util,
-            "geometry": payload["geometry"],
-        }
+    is_best = best is None or (math.isfinite(y_p) and y_p < best["y_p"])
+    if is_best and math.isfinite(y_p):
+        best = dict(design)
         payload["is_best"] = True
-        payload["best"] = best
     else:
         payload["is_best"] = False
-        payload["best"] = best
+    payload["best"] = best
 
-    return y_p, payload, best
+    is_best_feasible = False
+    if feasible and math.isfinite(y):
+        if best_feasible is None or y < best_feasible["y"]:
+            best_feasible = dict(design)
+            is_best_feasible = True
+    payload["is_best_feasible"] = is_best_feasible
+    payload["bestFeasible"] = best_feasible
+
+    return y_p, payload, best, best_feasible
 
 
 def run_tpe(
@@ -267,10 +296,11 @@ def run_tpe(
         n_startup=min(10, max(3, n_trials // 5)),
     )
     best: dict[str, Any] | None = None
+    best_feasible: dict[str, Any] | None = None
 
     for trial in range(n_trials):
         x = sampler.ask()
-        y_p, payload, best = _evaluate_one(
+        y_p, payload, best, best_feasible = _evaluate_one(
             x,
             trial=trial,
             var_names=var_names,
@@ -278,6 +308,7 @@ def run_tpe(
             materials=materials,
             constraints=constraints,
             best=best,
+            best_feasible=best_feasible,
         )
         sampler.tell(x, y_p)
         _emit(payload)
@@ -286,8 +317,9 @@ def run_tpe(
         {
             "type": "done",
             "best": best,
+            "bestFeasible": best_feasible,
             "n_trials": n_trials,
-            "best_value": best["y_p"] if best else None,
+            "best_value": best_feasible["y"] if best_feasible else None,
         }
     )
 

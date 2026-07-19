@@ -1,13 +1,9 @@
-# HPDesignBench Demonstrator
+# SlabDesignBench – Machbarkeitsdemonstrator
 
-Kleines, eigenständiges Web-Demonstrator-Projekt zur **Strukturoptimierung vorgespannter Carbonbeton-HP-Schalen**.
-
-Besucher setzen Eingangsparameter, starten eine **TPE-Optimierung** und sehen live:
-
-- Entwurfsvariablen (best-so-far)
-- Nebenbedingungs-Ausnutzungen
-- Ziele \(y\) und \(y_p\)
-- schematischen **Querschnitt** der besten Lösung bisher
+Eigenständiger Web-Demonstrator für die parametrische Bemessung und
+Optimierung einer vorgespannten HP-Schale. Das vorhandene
+Modell dient als technisches Vorstudienmodell für das umfangreichere
+Optimierungswerkzeug „SlabDesignBench“ für die Optimierung von Geschossdecken.
 
 ## Unabhängigkeit von HPDesignBench
 

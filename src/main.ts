@@ -2,9 +2,10 @@ import './style.css'
 import { createObjectiveChart } from './chart/objectiveChart'
 import { preloadBrowserEngine, runOptimize } from './optimizer/runOptimize'
 import { drawCrossSection } from './section/drawCrossSection'
-import type { OptEvent, OptimizeRequest } from './types'
+import type { BestState, OptEvent, OptimizeRequest } from './types'
 
-const UNIT_CO2 = 'kg CO₂-äquivalent/m²'
+const UNIT_CO2 = 'kg CO₂-Äq./m²'
+const FEAS_TOL = 1e-9
 
 /** Ordered constraint groups for the layperson UI (Z1–Z3 are hidden). */
 const CONSTRAINT_GROUPS: {
@@ -38,7 +39,10 @@ const CONSTRAINT_GROUPS: {
     title: '3. Konstruktive Durchbildung',
     items: [
       { key: 'C1_concrete_cover_capacity', label: '3.1 Betondeckung' },
-      { key: 'C2_clear_spacing_capacity', label: '3.2 Abstand Spannglieder' },
+      {
+        key: 'C2_clear_spacing_capacity',
+        label: '3.2 Abstand der Spannglieder',
+      },
       { key: 'C3_shell_thickness_capacity', label: '3.3 Mindestschalendicke' },
     ],
   },
@@ -47,7 +51,7 @@ const CONSTRAINT_GROUPS: {
     items: [
       {
         key: 'D1_airborne_sound_insulation_capacity',
-        label: '4.1 Luftschalldämmaß',
+        label: '4.1 Luftschalldämmmaß',
       },
       {
         key: 'D2_impact_sound_insulation_capacity',
@@ -61,17 +65,17 @@ const app = document.querySelector<HTMLDivElement>('#app')!
 
 app.innerHTML = `
   <header class="hero">
-    <h1 class="brand">HPDesignBench Demonstrator</h1>
+    <h1 class="brand">SlabDesignBench – Machbarkeitsdemonstrator</h1>
+    <p class="tagline">Vorstudienmodell einer HP-Schale</p>
     <p class="subtitle">
-      Dieser Demonstrator steht im Zusammenhang mit dem Förderantrag
-      „SlabDesignBench – Eine offene Forschungsplattform zur datenbasierten
-      Optimierung von Stahlbeton-Geschossdecken hinsichtlich Kosten und
-      CO<sub>2</sub>-Emissionen“ bei der Fritz und Trude Fortmann-Stiftung.
-      Er soll anhand eines vereinfachten Optimierungs-Skripts für HP-Schalen
-      als Deckenelemente die grundsätzliche Machbarkeit eines solchen Werkzeugs
-      demonstrieren. Weil die Laufzeit einer Iteration im Browser deutlich erhöht ist,
-      kann es sein, dass im festgelegten Evaluationsbudget kein Entwurf gefunden
-      wird, der alle Nebenbedingungen erfüllt.
+      Dieser Demonstrator zum Förderantrag „SlabDesignBench“ bei der Fritz und Trude
+      Fortmann-Stiftung zeigt anhand eines vorhandenen Optimierungswerkzeugs für
+      HP-Schalen als Deckenelemente die grundlegende Machbarkeit des Vorhabens.
+      Das vereinfachte Vorstudienmodell verbindet die parametrische Erzeugung von
+      Entwurfsproblemen mit der automatisierten Deckenbemessung mit
+      Optimierungsalgorithmen. Das Modell ist auf CO<sub>2</sub>-Optimierung und
+      ausgewählte Nachweise beschränkt und erlaubt wegen seiner Laufzeit nur eine
+      eingeschränkte Anzahl von Iterationen.
     </p>
   </header>
 
@@ -88,14 +92,14 @@ app.innerHTML = `
             </select>
           </div>
           <div class="field">
-            <label for="loadCategory">Nutzlastkategorie nach Eurocode 1</label>
+            <label for="loadCategory">Nutzlastkategorie</label>
             <select id="loadCategory">
               <option value="A2">A2: 1,5 kN/m²</option>
               <option value="B2" selected>B2: 3,0 kN/m²</option>
             </select>
           </div>
           <div class="field">
-            <label for="nTrials">Evaluationsbudget</label>
+            <label for="nTrials">Anzahl erlaubter Iterationen</label>
             <input id="nTrials" type="number" min="20" max="1000" step="10" value="60" />
             <p class="hint">Ganzzahl zwischen 20 und 1000</p>
           </div>
@@ -106,12 +110,11 @@ app.innerHTML = `
           <p class="status" id="status">Bereit.</p>
         </aside>
         <aside class="info-box">
-          <h3>Infobox „Eingaben“</h3>
+          <h3>Auswahl des Entwurfsproblems</h3>
           <p>
-            Hier wird das zu lösende Optimierungsproblem ausgewählt. In SlabDesignBench
-            wird hier eines der 116.640 zu lösenden Probleme eingestellt. Darüber hinaus
-            kann z.&nbsp;B. eingestellt werden, wie viele Iterationen der
-            Optimierungsalgorithmus ausführen darf.
+            Hier wird ein vorhandenes HP-Schalen-Testproblem ausgewählt.
+            SlabDesignBench überträgt dieselbe Prozesslogik auf 116.640
+            Bemessungsaufgaben je Deckentyp.
           </p>
         </aside>
       </div>
@@ -120,24 +123,31 @@ app.innerHTML = `
     <main class="stage">
       <div class="panel-unit">
         <section class="card">
-          <h2>Zielfunktion</h2>
+          <h2>Optimierungsverlauf</h2>
           <div class="obj-explain">
-            <p>Aktuelle Iteration: <strong id="objCurrent">–</strong> ${UNIT_CO2}</p>
-            <p>Bestes Ergebnis aller Iterationen: <strong id="objBest">–</strong> ${UNIT_CO2}<span id="objBestTrial"></span></p>
-            <p class="obj-trial">Iteration: <strong id="trialVal">–</strong></p>
+            <p>
+              Aktueller Entwurf:
+              <strong id="objCurrent">–</strong> ${UNIT_CO2}
+              <span id="objFeasibleBadge" class="feas-badge" hidden></span>
+            </p>
+            <p>
+              Bester zulässiger Entwurf:
+              <strong id="objBest">–</strong> ${UNIT_CO2}
+            </p>
+            <p class="obj-trial">
+              Iteration: <strong id="trialVal">–</strong> von
+              <strong id="trialTotal">–</strong>
+            </p>
           </div>
           <div id="chart"></div>
         </section>
         <aside class="info-box">
-          <h3>Infobox „Zielfunktion“</h3>
+          <h3>Darstellung des Optimierungsverlaufs</h3>
           <p>
-            Dieser Konvergenzplot stellt den Wert der zu minimierenden Zielfunktion
-            (hier Treibhausgaspotenzial, GWP) über die Iterationen dar. Werte, die über
-            den abgebildeten Wertebereich hinausgehen, sind mit einem kleinen Pfeil nach
-            oben dargestellt. Es ist zu sehen, wie qualitativ hochwertige
-            Zwischenergebnisse in <span class="swatch-blue">blau</span> den insgesamt
-            gefundenen Wert in <span class="swatch-red">rot</span> schrittweise
-            minimieren.
+            Die Punkte zeigen die bewerteten Entwürfe. Grau kennzeichnet unzulässige
+            Entwürfe mit nicht erfüllten Nachweisen, blaue Punkte kennzeichnen
+            zulässige Entwürfe, die alle Nachweise erfüllen. Die rote Linie zeigt das
+            niedrigste Treibhausgaspotenzial der bisher gefundenen zulässigen Entwürfe.
           </p>
         </aside>
       </div>
@@ -145,34 +155,36 @@ app.innerHTML = `
       <div class="panel-unit">
         <section class="sections-row">
           <div class="section-wrap">
-            <h2>Ergebnisse aktuelle Iteration</h2>
+            <h2>Aktueller Entwurf</h2>
             <svg id="sectionCurrent"></svg>
-            <h3 class="section-subhead">Variablen</h3>
+            <h3 class="section-subhead">Optimierungsvariablen</h3>
             <div id="statsCurrent" class="section-stats-host"></div>
-            <h3 class="section-subhead">Nebenbedingungen (Nachweise)</h3>
+            <h3 class="section-subhead">Nachweise (Ausnutzung in %)</h3>
+            <p class="checks-hint">Ausnutzungen bis einschliesslich 100&nbsp;% gelten als erfüllt.</p>
             <div id="constraintsCurrent" class="constraints-host"></div>
           </div>
-          <div class="section-wrap">
-            <h2>Bestes Ergebnis aller Iterationen</h2>
-            <svg id="sectionBest"></svg>
-            <h3 class="section-subhead">Variablen</h3>
-            <div id="statsBest" class="section-stats-host"></div>
-            <h3 class="section-subhead">Nebenbedingungen (Nachweise)</h3>
-            <div id="constraintsBest" class="constraints-host"></div>
+          <div class="section-wrap" id="bestPanel">
+            <h2>Bester zulässiger Entwurf</h2>
+            <p id="bestPlaceholder" class="best-placeholder">
+              Noch kein zulässiger Entwurf gefunden.
+            </p>
+            <div id="bestContent" class="best-content" hidden>
+              <svg id="sectionBest"></svg>
+              <h3 class="section-subhead">Optimierungsvariablen</h3>
+              <div id="statsBest" class="section-stats-host"></div>
+              <h3 class="section-subhead">Nachweise (Ausnutzung in %)</h3>
+              <p class="checks-hint">Ausnutzungen bis einschliesslich 100&nbsp;% gelten als erfüllt.</p>
+              <div id="constraintsBest" class="constraints-host"></div>
+            </div>
           </div>
         </section>
         <aside class="info-box">
-          <h3>Infobox „Ergebnisse“</h3>
+          <h3>Vergleich der Entwürfe</h3>
           <p>
-            Hier werden die wichtigsten Informationen zur aktuellen Iteration und der
-            insgesamt besten Iteration dargestellt. In der linken Spalte ist zu sehen,
-            wie sich mit jeder neuen Iteration die Werte der Variablen ändern und somit
-            auch die Ausnutzungen der Nachweise darunter variieren. Der bisher beste Entwurf wird
-            auf der rechten Seite dargestellt. Der Gesamtwert der Zielfunktion eines
-            Entwurfs wird durch die eingesetzten Materialvolumina und die zugehörigen
-            GWP-Werte berechnet. Sind einzelne Nachweise nicht eingehalten
-            (Ausnutzung&nbsp;&gt;&nbsp;100&nbsp;%), wird der Wert der Zielfunktion
-            künstlich erhöht (Penalty-Konzept).
+            Links ist der aktuelle Entwurf, rechts der beste bisher gefundene zulässige
+            Entwurf dargestellt. Ausnutzungen bis 100&nbsp;% gelten als erfüllt. Nicht
+            zulässige Entwürfe werden intern mit einem Strafterm belegt und nicht als
+            bester zulässiger Entwurf angezeigt.
           </p>
         </aside>
       </div>
@@ -181,9 +193,8 @@ app.innerHTML = `
 
   <footer class="footer">
     <p>
-      Dieses Web-Tool basiert auf mehreren Masterarbeiten und Forschungsaktivitäten
-      am Fachgebiet Entwerfen und Konstruieren - Massivbau an der Technischen Universität Berlin.
-      Kontakt:
+      Vorstudie: Fachgebiet Entwerfen und Konstruieren – Massivbau, Technische
+      Universität Berlin. Kontakt:
       <a href="mailto:m.dombrowski@tu-berlin.de">m.dombrowski@tu-berlin.de</a>
     </p>
   </footer>
@@ -198,27 +209,27 @@ const startBtn = document.querySelector<HTMLButtonElement>('#startBtn')!
 const stopBtn = document.querySelector<HTMLButtonElement>('#stopBtn')!
 const objCurrentEl = document.querySelector<HTMLElement>('#objCurrent')!
 const objBestEl = document.querySelector<HTMLElement>('#objBest')!
-const objBestTrialEl = document.querySelector<HTMLElement>('#objBestTrial')!
+const objFeasibleBadge = document.querySelector<HTMLElement>('#objFeasibleBadge')!
 const trialVal = document.querySelector<HTMLElement>('#trialVal')!
+const trialTotal = document.querySelector<HTMLElement>('#trialTotal')!
 const constraintsCurrentEl = document.querySelector<HTMLElement>('#constraintsCurrent')!
 const constraintsBestEl = document.querySelector<HTMLElement>('#constraintsBest')!
+const bestPlaceholder = document.querySelector<HTMLElement>('#bestPlaceholder')!
+const bestContent = document.querySelector<HTMLElement>('#bestContent')!
 const chart = createObjectiveChart(document.querySelector<HTMLElement>('#chart')!)
 
 let abort: AbortController | null = null
 let lastCurrentUtil: Record<string, number> | undefined
+let nTrialsTotal = 0
+let stoppedByUser = false
 
 drawCrossSection(sectionCurrentEl, null, {
   idPrefix: 'cur',
-  ariaLabel: 'Querschnitt aktuelle Iteration',
+  ariaLabel: 'Querschnitt aktueller Entwurf',
   statsEl: statsCurrentEl,
 })
-drawCrossSection(sectionBestEl, null, {
-  idPrefix: 'best',
-  ariaLabel: 'Querschnitt bestes Ergebnis',
-  statsEl: statsBestEl,
-})
 constraintsCurrentEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
-constraintsBestEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
+showBestEmpty()
 
 function fmt(n: number | null | undefined, digits = 2): string {
   if (n == null || !Number.isFinite(n)) return '–'
@@ -226,6 +237,17 @@ function fmt(n: number | null | undefined, digits = 2): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits,
   })
+}
+
+function fmtPct(u: number): string {
+  return (u * 100).toLocaleString('de-DE', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })
+}
+
+function isOk(u: number): boolean {
+  return u <= 1 + FEAS_TOL
 }
 
 function maxUtil(
@@ -240,6 +262,36 @@ function maxUtil(
   return Math.max(...vals)
 }
 
+function showBestEmpty() {
+  bestPlaceholder.hidden = false
+  bestContent.hidden = true
+  constraintsBestEl.innerHTML = ''
+  statsBestEl.innerHTML = ''
+}
+
+function showBestDesign(best: BestState) {
+  bestPlaceholder.hidden = true
+  bestContent.hidden = false
+  drawCrossSection(sectionBestEl, best.geometry, {
+    idPrefix: 'best',
+    ariaLabel: 'Querschnitt bester zulässiger Entwurf',
+    statsEl: statsBestEl,
+  })
+  renderConstraintsInto(constraintsBestEl, best.utilizations)
+}
+
+function setFeasibleBadge(feasible: boolean | null) {
+  if (feasible == null) {
+    objFeasibleBadge.hidden = true
+    objFeasibleBadge.textContent = ''
+    objFeasibleBadge.className = 'feas-badge'
+    return
+  }
+  objFeasibleBadge.hidden = false
+  objFeasibleBadge.textContent = feasible ? 'zulässig' : 'nicht zulässig'
+  objFeasibleBadge.className = `feas-badge ${feasible ? 'ok' : 'bad'}`
+}
+
 function renderConstraintsInto(
   el: HTMLElement,
   util: Record<string, number> | undefined,
@@ -249,15 +301,39 @@ function renderConstraintsInto(
     return
   }
 
+  const shown: { label: string; u: number; ok: boolean }[] = []
+  for (const group of CONSTRAINT_GROUPS) {
+    for (const item of group.items) {
+      const u = maxUtil(util, item.key)
+      if (u == null) continue
+      shown.push({ label: item.label, u, ok: isOk(u) })
+    }
+  }
+
+  const failed = shown.filter((r) => !r.ok).length
+  const total = shown.length
+  const summary =
+    total === 0
+      ? ''
+      : failed === 0
+        ? '<p class="checks-summary ok">Alle Nachweise erfüllt</p>'
+        : `<p class="checks-summary bad">${failed} von ${total} Nachweisen nicht erfüllt</p>`
+
   const groups = CONSTRAINT_GROUPS.map((group) => {
     const rows = group.items
       .map((item) => {
         const u = maxUtil(util, item.key)
         if (u == null) return ''
-        const ok = u <= 1
+        const ok = isOk(u)
+        const title = ok
+          ? 'Nachweis erfüllt: Ausnutzung ≤ 100 %'
+          : 'Nachweis nicht erfüllt: Ausnutzung > 100 %'
+        const text = ok
+          ? `${fmtPct(u)} % – erfüllt`
+          : `${fmtPct(u)} % – nicht erfüllt`
         return `<div class="check-row">
           <span class="check-label">${item.label}</span>
-          <span class="pill ${ok ? 'ok' : 'bad'}" title="Ausnutzung u ≤ 1 ist erfüllt">${fmt(u, 3)}</span>
+          <span class="pill ${ok ? 'ok' : 'bad'}" title="${title}">${text}</span>
         </div>`
       })
       .filter(Boolean)
@@ -270,7 +346,8 @@ function renderConstraintsInto(
   }).join('')
 
   el.innerHTML =
-    groups || '<p class="empty">Keine Nachweise in dieser Auswertung.</p>'
+    summary +
+    (groups || '<p class="empty">Keine Nachweise in dieser Auswertung.</p>')
 }
 
 function renderConstraints(
@@ -278,7 +355,7 @@ function renderConstraints(
   best: Record<string, number> | undefined,
 ) {
   renderConstraintsInto(constraintsCurrentEl, current)
-  renderConstraintsInto(constraintsBestEl, best)
+  if (best) renderConstraintsInto(constraintsBestEl, best)
 }
 
 function onEvent(ev: OptEvent) {
@@ -292,58 +369,65 @@ function onEvent(ev: OptEvent) {
   }
   if (ev.type === 'start') {
     chart.reset()
-    statusEl.textContent = `Optimierung läuft · ${ev.n_trials} Iterationen`
+    nTrialsTotal = ev.n_trials
+    trialTotal.textContent = String(ev.n_trials)
+    trialVal.textContent = '0'
+    statusEl.textContent = `Optimierung läuft · 0 von ${ev.n_trials} Iterationen`
     return
   }
   if (ev.type === 'trial') {
-    trialVal.textContent = String(ev.trial + 1)
-    // Show the optimizer objective without naming y / y_p.
-    objCurrentEl.textContent = fmt(ev.y_p)
-    if (ev.best) {
-      objBestEl.textContent = fmt(ev.best.y_p)
-      objBestTrialEl.textContent = ` (Iteration ${ev.best.trial + 1})`
+    const i = ev.trial + 1
+    trialVal.textContent = String(i)
+    trialTotal.textContent = String(nTrialsTotal || '–')
+    objCurrentEl.textContent = fmt(ev.y)
+    setFeasibleBadge(ev.is_feasible)
+
+    const bf = ev.bestFeasible
+    if (bf) {
+      objBestEl.textContent = fmt(bf.y)
+      showBestDesign(bf)
+    } else {
+      objBestEl.textContent = '–'
+      showBestEmpty()
     }
 
     drawCrossSection(sectionCurrentEl, ev.geometry, {
       idPrefix: 'cur',
-      ariaLabel: 'Querschnitt aktuelle Iteration',
+      ariaLabel: 'Querschnitt aktueller Entwurf',
       statsEl: statsCurrentEl,
     })
 
     chart.push({
       trial: ev.trial,
-      current: ev.y_p,
-      best: ev.best?.y_p ?? null,
+      y: ev.y,
+      feasible: ev.is_feasible,
+      bestFeasibleY: bf?.y ?? null,
     })
 
-    if (ev.best) {
-      drawCrossSection(sectionBestEl, ev.best.geometry, {
-        idPrefix: 'best',
-        ariaLabel: 'Querschnitt bestes Ergebnis',
-        statsEl: statsBestEl,
-      })
-    }
-    renderConstraints(ev.utilizations, ev.best?.utilizations)
+    renderConstraints(ev.utilizations, bf?.utilizations)
     lastCurrentUtil = ev.utilizations
 
-    statusEl.textContent = ev.is_best
-      ? `Iteration ${ev.trial + 1} · neues bestes Ergebnis`
-      : `Iteration ${ev.trial + 1}`
+    if (ev.is_best_feasible) {
+      statusEl.textContent = `Iteration ${i} von ${nTrialsTotal} · neuer bester zulässiger Entwurf`
+    } else if (!bf) {
+      statusEl.textContent = `Iteration ${i} von ${nTrialsTotal} · noch keine zulässige Lösung`
+    } else {
+      statusEl.textContent = `Iteration ${i} von ${nTrialsTotal}`
+    }
     return
   }
   if (ev.type === 'done') {
-    statusEl.textContent = ev.best
-      ? `Fertig · bestes Ergebnis = ${fmt(ev.best.y_p)} ${UNIT_CO2} (Iteration ${ev.best.trial + 1})`
-      : 'Fertig · keine gültige Lösung'
-    if (ev.best) {
-      drawCrossSection(sectionBestEl, ev.best.geometry, {
-        idPrefix: 'best',
-        ariaLabel: 'Querschnitt bestes Ergebnis',
-        statsEl: statsBestEl,
-      })
-      objBestEl.textContent = fmt(ev.best.y_p)
-      objBestTrialEl.textContent = ` (Iteration ${ev.best.trial + 1})`
-      renderConstraints(lastCurrentUtil, ev.best.utilizations)
+    if (stoppedByUser) {
+      statusEl.textContent = 'Optimierung gestoppt · Ergebnis vorläufig.'
+    } else if (ev.bestFeasible) {
+      statusEl.textContent = `Fertig · bester zulässiger Entwurf: ${fmt(ev.bestFeasible.y)} ${UNIT_CO2}`
+      objBestEl.textContent = fmt(ev.bestFeasible.y)
+      showBestDesign(ev.bestFeasible)
+      renderConstraints(lastCurrentUtil, ev.bestFeasible.utilizations)
+    } else {
+      statusEl.textContent = 'Fertig · keine zulässige Lösung gefunden.'
+      objBestEl.textContent = '–'
+      showBestEmpty()
     }
   }
 }
@@ -367,33 +451,34 @@ function readRequest(): OptimizeRequest {
 startBtn.addEventListener('click', async () => {
   abort?.abort()
   abort = new AbortController()
+  stoppedByUser = false
   startBtn.disabled = true
   stopBtn.disabled = false
   chart.reset()
   objCurrentEl.textContent = '–'
   objBestEl.textContent = '–'
-  objBestTrialEl.textContent = ''
+  setFeasibleBadge(null)
   trialVal.textContent = '–'
+  trialTotal.textContent = '–'
   lastCurrentUtil = undefined
   statusEl.textContent = 'Starte Optimierung…'
   drawCrossSection(sectionCurrentEl, null, {
     idPrefix: 'cur',
     statsEl: statsCurrentEl,
   })
-  drawCrossSection(sectionBestEl, null, {
-    idPrefix: 'best',
-    statsEl: statsBestEl,
-  })
+  showBestEmpty()
   constraintsCurrentEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
-  constraintsBestEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
 
   try {
     await runOptimize(readRequest(), onEvent, abort.signal)
+    if (stoppedByUser && !statusEl.textContent?.startsWith('Optimierung gestoppt')) {
+      statusEl.textContent = 'Optimierung gestoppt · Ergebnis vorläufig.'
+    }
   } catch (err) {
-    if (!(err instanceof DOMException && err.name === 'AbortError')) {
-      statusEl.textContent = `Fehler: ${err instanceof Error ? err.message : String(err)}`
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      statusEl.textContent = 'Optimierung gestoppt · Ergebnis vorläufig.'
     } else {
-      statusEl.textContent = 'Abgebrochen.'
+      statusEl.textContent = `Fehler: ${err instanceof Error ? err.message : String(err)}`
     }
   } finally {
     startBtn.disabled = false
@@ -402,6 +487,7 @@ startBtn.addEventListener('click', async () => {
 })
 
 stopBtn.addEventListener('click', () => {
+  stoppedByUser = true
   abort?.abort()
   stopBtn.disabled = true
 })

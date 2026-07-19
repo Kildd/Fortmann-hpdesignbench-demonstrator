@@ -66,6 +66,14 @@ body {
   line-height: 1.05;
 }
 
+.tagline {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
 .subtitle {
   margin: 0;
   max-width: 52rem;
@@ -309,20 +317,81 @@ button:disabled {
 
 .section-wrap h2 {
   margin: 0 0 0.5rem;
-  font-size: 0.78rem;
+  font-size: 1rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .section-subhead {
   margin: 0.9rem 0 0.4rem;
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.checks-hint {
+  margin: 0 0 0.55rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.checks-summary {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.checks-summary.ok {
+  color: var(--ok);
+}
+
+.checks-summary.bad {
+  color: var(--bad);
+}
+
+.feas-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.feas-badge.ok {
+  color: var(--ok);
+  border-color: rgba(47, 125, 50, 0.35);
+  background: rgba(47, 125, 50, 0.08);
+}
+
+.feas-badge.bad {
+  color: var(--bad);
+  border-color: rgba(196, 13, 32, 0.35);
+  background: rgba(196, 13, 32, 0.08);
+}
+
+.best-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+  margin: 0;
+  padding: 1.25rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.best-content[hidden],
+.best-placeholder[hidden] {
+  display: none !important;
 }
 
 .section-wrap svg {
@@ -479,11 +548,12 @@ td.mono,
 .pill {
   display: inline-block;
   min-width: 3.2rem;
-  text-align: center;
+  text-align: right;
   font-family: var(--mono);
   font-size: 0.75rem;
-  padding: 0.15rem 0.35rem;
+  padding: 0.15rem 0.4rem;
   border: 1px solid var(--line);
+  white-space: nowrap;
 }
 
 .pill.ok {
