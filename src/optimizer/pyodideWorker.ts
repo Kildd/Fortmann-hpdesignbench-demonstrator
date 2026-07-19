@@ -21,6 +21,8 @@ type WorkerIn =
   | { cmd: 'optimize'; req: OptimizeRequest }
 
 const PYODIDE_INDEX = 'https://cdn.jsdelivr.net/pyodide/v0.27.5/full/'
+/** Bump when engine files change so GitHub Pages / browser caches cannot serve stale Python. */
+const ENGINE_REV = '2026-07-19b'
 
 let pyodide: PyodideInterface | null = null
 let ready = false
@@ -40,13 +42,18 @@ async function getPyodide(): Promise<PyodideInterface> {
 }
 
 async function fetchText(url: string): Promise<string> {
-  const res = await fetch(url)
+  const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) throw new Error(`Fetch failed: ${url}`)
   return res.text()
 }
 
+function engineUrl(base: string, rel: string): string {
+  const sep = rel.includes('?') ? '&' : '?'
+  return `${base}engine/${rel}${sep}v=${ENGINE_REV}`
+}
+
 async function mountEngine(base: string, pd: PyodideInterface): Promise<void> {
-  const res = await fetch(`${base}engine/manifest.json`)
+  const res = await fetch(engineUrl(base, 'manifest.json'), { cache: 'no-store' })
   if (!res.ok) {
     throw new Error(
       'engine/manifest.json fehlt – bitte docs neu bauen (npm run build).',
@@ -56,7 +63,7 @@ async function mountEngine(base: string, pd: PyodideInterface): Promise<void> {
   pd.FS.mkdirTree('/home/pyodide/engine')
   let done = 0
   for (const rel of files) {
-    const text = await fetchText(`${base}engine/${rel}`)
+    const text = await fetchText(engineUrl(base, rel))
     const target = `/home/pyodide/engine/${rel}`
     pd.FS.mkdirTree(target.slice(0, target.lastIndexOf('/')))
     pd.FS.writeFile(target, text)
