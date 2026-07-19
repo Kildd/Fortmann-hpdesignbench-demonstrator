@@ -41,6 +41,7 @@
   "slab_construction/slab_construction.py",
   "slab_construction/__init__.py",
   "tpe_simple.py",
+  "triangle_compat.py",
   "vendor/README.md",
   "vendor/structuralcodes/codes/ec2_2004/shear.py",
   "vendor/structuralcodes/codes/ec2_2004/_concrete_creep_and_shrinkage.py",

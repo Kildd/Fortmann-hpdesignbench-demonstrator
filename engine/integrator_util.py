@@ -7,13 +7,16 @@ from typing import Literal
 
 def section_integrator() -> Literal["fiber", "marin"]:
     """
-    Prefer fiber (as in HPDesignBench). Fall back to marin when the
-    ``triangle`` package is missing or only a Pyodide stub is present.
+    Prefer fiber (as in HPDesignBench). Uses native ``triangle`` when
+    installed, otherwise the pure-Python ``triangle_compat`` shim.
+    Fall back to marin only if neither provides ``triangulate``.
     """
     try:
         import triangle
 
         if getattr(triangle, "__hp_stub__", False):
+            return "marin"
+        if not callable(getattr(triangle, "triangulate", None)):
             return "marin"
         return "fiber"
     except Exception:

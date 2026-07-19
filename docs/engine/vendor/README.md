@@ -1,6 +1,10 @@
 # Vendored pure-Python packages
 
 `structuralcodes` is copied here so the GitHub Pages / Pyodide path does **not**
-need `micropip` (and so we avoid the unavailable `triangle` binary wheel).
+need `micropip`.
 
-Native local runs can still use the `.venv` install from `requirements-engine.txt`.
+The native Shewchuk `triangle` wheel is unavailable under Pyodide. The browser
+path uses `engine/triangle_compat.py` (scipy + shapely) as a drop-in
+`triangulate` shim so the **fiber** section integrator still runs.
+
+Native local runs use the real `triangle` package from `requirements-engine.txt`.

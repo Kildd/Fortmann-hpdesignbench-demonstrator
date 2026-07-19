@@ -16,30 +16,26 @@ import io
 import json
 import sys
 import traceback
-import types
 from pathlib import Path
 from typing import Any
 
 ENGINE_ROOT = Path(__file__).resolve().parent
 VENDOR_ROOT = ENGINE_ROOT / "vendor"
 
-# structuralcodes imports triangle at module import time; stub before any analysis import.
+for _p in (str(VENDOR_ROOT), str(ENGINE_ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+# structuralcodes imports triangle at module import time.
+# Prefer the native Shewchuk package; otherwise use the pure-Python compat shim
+# so the fiber integrator works under Pyodide.
 if "triangle" not in sys.modules:
     try:
         import triangle as _triangle_mod  # noqa: F401
     except Exception:
-        _tri = types.ModuleType("triangle")
-        _tri.__hp_stub__ = True  # type: ignore[attr-defined]
+        import triangle_compat as _triangle_mod  # noqa: F401
 
-        def _triangulate(*_args: Any, **_kwargs: Any) -> Any:
-            raise RuntimeError("triangle is not available in this environment")
-
-        _tri.triangulate = _triangulate  # type: ignore[attr-defined]
-        sys.modules["triangle"] = _tri
-
-for _p in (str(VENDOR_ROOT), str(ENGINE_ROOT)):
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+        sys.modules["triangle"] = _triangle_mod
 
 from core.ioh_core.import_specs import (  # noqa: E402
     build_space,
