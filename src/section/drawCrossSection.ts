@@ -82,6 +82,31 @@ function fmtVal(n: number, digits = 1): string {
   return n.toFixed(digits)
 }
 
+/** EN 206 cylinder → cube strength for full class names (e.g. C50/60). */
+const FCK_CUBE: Record<number, number> = {
+  12: 15,
+  16: 20,
+  20: 25,
+  25: 30,
+  30: 37,
+  35: 45,
+  40: 50,
+  45: 55,
+  50: 60,
+  55: 67,
+  60: 75,
+  70: 85,
+  80: 95,
+  90: 105,
+  100: 115,
+}
+
+function concreteClassLabel(fck: number): string {
+  const cyl = Math.round(fck)
+  const cube = FCK_CUBE[cyl]
+  return cube != null ? `C${cyl}/${cube}` : `C${cyl}`
+}
+
 function renderStats(el: HTMLElement | null | undefined, g: GeometryState | null): void {
   if (!el) return
   if (!g) {
@@ -103,7 +128,7 @@ function renderStats(el: HTMLElement | null | undefined, g: GeometryState | null
       Number.isFinite(nt) ? `${nt} je Seite` : '–',
     ],
     ['Randabstand Spannglieder', Number.isFinite(dy) ? `${fmtVal(dy, 0)} mm` : '–'],
-    ['Betongüte', Number.isFinite(fck) ? `C${fmtVal(fck, 0)}` : '–'],
+    ['Betongüte', Number.isFinite(fck) ? concreteClassLabel(fck) : '–'],
     [
       'Vorspanngrad Spannglieder',
       Number.isFinite(kap) ? `${fmtVal(kap, 0)} %` : '–',

@@ -9,6 +9,30 @@ export type ChartPoint = {
   best: number | null
 }
 
+const Y_MAX = 1000
+
+function clampY(v: number | null): number | null {
+  if (v == null || !Number.isFinite(v)) return null
+  return Math.min(v, Y_MAX)
+}
+
+function drawUpArrow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+): void {
+  const h = 7
+  const half = 4.5
+  ctx.beginPath()
+  ctx.moveTo(x, y)
+  ctx.lineTo(x - half, y + h)
+  ctx.lineTo(x + half, y + h)
+  ctx.closePath()
+  ctx.fillStyle = color
+  ctx.fill()
+}
+
 export function createObjectiveChart(el: HTMLElement) {
   const data: [
     number[],
@@ -16,17 +40,20 @@ export function createObjectiveChart(el: HTMLElement) {
     (number | null | undefined)[],
   ] = [[], [], []]
 
+  /** Raw values (unclamped) for overflow markers. */
+  const rawCurrent: (number | null)[] = []
+  const rawBest: (number | null)[] = []
   let bestValue: number | null = null
 
   const opts: uPlot.Options = {
     width: el.clientWidth || 480,
     height: 260,
-    padding: [8, 12, 8, 8],
+    padding: [10, 12, 8, 8],
     scales: {
       x: { time: false },
       y: {
         auto: false,
-        range: [0, 100000],
+        range: [0, Y_MAX],
       },
     },
     series: [
@@ -71,6 +98,28 @@ export function createObjectiveChart(el: HTMLElement) {
       },
     ],
     legend: { show: true },
+    hooks: {
+      draw: [
+        (u) => {
+          const { ctx, bbox } = u
+          const top = bbox.top
+          ctx.save()
+          for (let i = 0; i < data[0].length; i++) {
+            const xVal = data[0][i]
+            const x = u.valToPos(xVal, 'x', true)
+            const cur = rawCurrent[i]
+            const best = rawBest[i]
+            if (cur != null && cur > Y_MAX) {
+              drawUpArrow(ctx, x - 3, top + 1, '#1f91cc')
+            }
+            if (best != null && best > Y_MAX) {
+              drawUpArrow(ctx, x + 3, top + 1, '#c40d20')
+            }
+          }
+          ctx.restore()
+        },
+      ],
+    },
   }
 
   const plot = new uPlot(opts, data, el)
@@ -85,14 +134,18 @@ export function createObjectiveChart(el: HTMLElement) {
       data[0] = []
       data[1] = []
       data[2] = []
+      rawCurrent.length = 0
+      rawBest.length = 0
       bestValue = null
       plot.setData(data)
     },
     push(p: ChartPoint) {
       if (p.best != null && Number.isFinite(p.best)) bestValue = p.best
       data[0].push(p.trial + 1)
-      data[1].push(p.current)
-      data[2].push(bestValue)
+      data[1].push(clampY(p.current))
+      data[2].push(clampY(bestValue))
+      rawCurrent.push(p.current)
+      rawBest.push(bestValue)
       plot.setData(data)
     },
     destroy() {
