@@ -135,6 +135,7 @@ app.innerHTML = `
             <p>
               Bester zulässiger Entwurf:
               <strong id="objBest">–</strong> ${UNIT_CO2}
+              <span id="objBestTrial" class="obj-best-trial"></span>
             </p>
             <p class="obj-trial">
               Iteration: <strong id="trialVal">–</strong> von
@@ -217,6 +218,7 @@ const startBtn = document.querySelector<HTMLButtonElement>('#startBtn')!
 const stopBtn = document.querySelector<HTMLButtonElement>('#stopBtn')!
 const objCurrentEl = document.querySelector<HTMLElement>('#objCurrent')!
 const objBestEl = document.querySelector<HTMLElement>('#objBest')!
+const objBestTrialEl = document.querySelector<HTMLElement>('#objBestTrial')!
 const gwpCurrentEl = document.querySelector<HTMLElement>('#gwpCurrent')!
 const gwpBestEl = document.querySelector<HTMLElement>('#gwpBest')!
 const objFeasibleBadge = document.querySelector<HTMLElement>('#objFeasibleBadge')!
@@ -248,6 +250,16 @@ function fmtY(n: number | null | undefined): string {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   })
+}
+
+function setBestObjective(best: BestState | null) {
+  if (!best || !Number.isFinite(best.y)) {
+    objBestEl.textContent = '–'
+    objBestTrialEl.textContent = ''
+    return
+  }
+  objBestEl.textContent = fmtY(best.y)
+  objBestTrialEl.textContent = `(Iteration ${best.trial + 1})`
 }
 
 function fmtPct(u: number): string {
@@ -398,10 +410,10 @@ function onEvent(ev: OptEvent) {
 
     const bf = ev.bestFeasible
     if (bf) {
-      objBestEl.textContent = fmtY(bf.y)
+      setBestObjective(bf)
       showBestDesign(bf)
     } else {
-      objBestEl.textContent = '–'
+      setBestObjective(null)
       showBestEmpty()
     }
 
@@ -434,13 +446,14 @@ function onEvent(ev: OptEvent) {
     if (stoppedByUser) {
       statusEl.textContent = 'Optimierung gestoppt · Ergebnis vorläufig.'
     } else if (ev.bestFeasible) {
-      statusEl.textContent = `Fertig · bester zulässiger Entwurf: ${fmtY(ev.bestFeasible.y)} ${UNIT_CO2}`
-      objBestEl.textContent = fmtY(ev.bestFeasible.y)
-      showBestDesign(ev.bestFeasible)
-      renderConstraints(lastCurrentUtil, ev.bestFeasible.utilizations)
+      const bf = ev.bestFeasible
+      statusEl.textContent = `Fertig · bester zulässiger Entwurf: ${fmtY(bf.y)} ${UNIT_CO2} (Iteration ${bf.trial + 1})`
+      setBestObjective(bf)
+      showBestDesign(bf)
+      renderConstraints(lastCurrentUtil, bf.utilizations)
     } else {
       statusEl.textContent = 'Fertig · keine zulässige Lösung gefunden.'
-      objBestEl.textContent = '–'
+      setBestObjective(null)
       showBestEmpty()
     }
   }
@@ -470,7 +483,7 @@ startBtn.addEventListener('click', async () => {
   stopBtn.disabled = false
   chart.reset()
   objCurrentEl.textContent = '–'
-  objBestEl.textContent = '–'
+  setBestObjective(null)
   gwpCurrentEl.textContent = '–'
   gwpBestEl.textContent = '–'
   setFeasibleBadge(null)
