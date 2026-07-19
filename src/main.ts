@@ -123,7 +123,7 @@ app.innerHTML = `
           <h2>Zielfunktion</h2>
           <div class="obj-explain">
             <p>Aktuelle Iteration: <strong id="objCurrent">–</strong> ${UNIT_CO2}</p>
-            <p>Bestes Ergebnis aller Iterationen: <strong id="objBest">–</strong> ${UNIT_CO2}</p>
+            <p>Bestes Ergebnis aller Iterationen: <strong id="objBest">–</strong> ${UNIT_CO2}<span id="objBestTrial"></span></p>
             <p class="obj-trial">Iteration: <strong id="trialVal">–</strong></p>
           </div>
           <div id="chart"></div>
@@ -198,6 +198,7 @@ const startBtn = document.querySelector<HTMLButtonElement>('#startBtn')!
 const stopBtn = document.querySelector<HTMLButtonElement>('#stopBtn')!
 const objCurrentEl = document.querySelector<HTMLElement>('#objCurrent')!
 const objBestEl = document.querySelector<HTMLElement>('#objBest')!
+const objBestTrialEl = document.querySelector<HTMLElement>('#objBestTrial')!
 const trialVal = document.querySelector<HTMLElement>('#trialVal')!
 const constraintsCurrentEl = document.querySelector<HTMLElement>('#constraintsCurrent')!
 const constraintsBestEl = document.querySelector<HTMLElement>('#constraintsBest')!
@@ -299,7 +300,8 @@ function onEvent(ev: OptEvent) {
     // Show the optimizer objective without naming y / y_p.
     objCurrentEl.textContent = fmt(ev.y_p)
     if (ev.best) {
-      objBestEl.textContent = `${fmt(ev.best.y_p)} (Iteration ${ev.best.trial + 1})`
+      objBestEl.textContent = fmt(ev.best.y_p)
+      objBestTrialEl.textContent = ` (Iteration ${ev.best.trial + 1})`
     }
 
     drawCrossSection(sectionCurrentEl, ev.geometry, {
@@ -339,7 +341,8 @@ function onEvent(ev: OptEvent) {
         ariaLabel: 'Querschnitt bestes Ergebnis',
         statsEl: statsBestEl,
       })
-      objBestEl.textContent = `${fmt(ev.best.y_p)} (Iteration ${ev.best.trial + 1})`
+      objBestEl.textContent = fmt(ev.best.y_p)
+      objBestTrialEl.textContent = ` (Iteration ${ev.best.trial + 1})`
       trialVal.textContent = String(ev.best.trial + 1)
       renderConstraints(lastCurrentUtil, ev.best.utilizations)
     }
@@ -370,6 +373,7 @@ startBtn.addEventListener('click', async () => {
   chart.reset()
   objCurrentEl.textContent = '–'
   objBestEl.textContent = '–'
+  objBestTrialEl.textContent = ''
   trialVal.textContent = '–'
   lastCurrentUtil = undefined
   statusEl.textContent = 'Starte Optimierung…'
