@@ -217,6 +217,15 @@ button:disabled {
   color: var(--muted);
 }
 
+.section-subhead {
+  margin: 0.9rem 0 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .section-wrap svg {
   width: 100%;
   height: auto;
@@ -224,7 +233,11 @@ button:disabled {
 }
 
 .section-stats-host {
-  margin-top: 0.65rem;
+  margin-top: 0.15rem;
+}
+
+.constraints-host {
+  margin-top: 0.15rem;
 }
 
 .section-stats {
@@ -317,27 +330,6 @@ button:disabled {
   margin: 0 0 0.4rem;
   font-size: 0.88rem;
   font-weight: 600;
-}
-
-.constraints-dual {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-}
-
-@media (max-width: 900px) {
-  .constraints-dual {
-    grid-template-columns: 1fr;
-  }
-}
-
-.constraints-col-title {
-  margin: 0 0 0.65rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
 }
 
 .check-row {

@@ -98,19 +98,6 @@ app.innerHTML = `
     </aside>
 
     <main class="stage">
-      <section class="sections-row">
-        <div class="section-wrap">
-          <h2>Querschnitt – aktuelle Iteration</h2>
-          <svg id="sectionCurrent"></svg>
-          <div id="statsCurrent" class="section-stats-host"></div>
-        </div>
-        <div class="section-wrap">
-          <h2>Querschnitt – bestes Ergebnis aller Iterationen</h2>
-          <svg id="sectionBest"></svg>
-          <div id="statsBest" class="section-stats-host"></div>
-        </div>
-      </section>
-
       <section class="card">
         <h2>Zielfunktion</h2>
         <div class="obj-explain">
@@ -121,9 +108,23 @@ app.innerHTML = `
         <div id="chart"></div>
       </section>
 
-      <section class="card">
-        <h2>Nebenbedingungen (Nachweise)</h2>
-        <div id="constraints"></div>
+      <section class="sections-row">
+        <div class="section-wrap">
+          <h2>Aktuelle Iteration</h2>
+          <svg id="sectionCurrent"></svg>
+          <h3 class="section-subhead">Variablen</h3>
+          <div id="statsCurrent" class="section-stats-host"></div>
+          <h3 class="section-subhead">Nebenbedingungen (Nachweise)</h3>
+          <div id="constraintsCurrent" class="constraints-host"></div>
+        </div>
+        <div class="section-wrap">
+          <h2>Bestes Ergebnis aller Iterationen</h2>
+          <svg id="sectionBest"></svg>
+          <h3 class="section-subhead">Variablen</h3>
+          <div id="statsBest" class="section-stats-host"></div>
+          <h3 class="section-subhead">Nebenbedingungen (Nachweise)</h3>
+          <div id="constraintsBest" class="constraints-host"></div>
+        </div>
       </section>
     </main>
   </div>
@@ -148,7 +149,8 @@ const stopBtn = document.querySelector<HTMLButtonElement>('#stopBtn')!
 const objCurrentEl = document.querySelector<HTMLElement>('#objCurrent')!
 const objBestEl = document.querySelector<HTMLElement>('#objBest')!
 const trialVal = document.querySelector<HTMLElement>('#trialVal')!
-const constraintsEl = document.querySelector<HTMLElement>('#constraints')!
+const constraintsCurrentEl = document.querySelector<HTMLElement>('#constraintsCurrent')!
+const constraintsBestEl = document.querySelector<HTMLElement>('#constraintsBest')!
 const chart = createObjectiveChart(document.querySelector<HTMLElement>('#chart')!)
 
 let abort: AbortController | null = null
@@ -164,7 +166,8 @@ drawCrossSection(sectionBestEl, null, {
   ariaLabel: 'Querschnitt bestes Ergebnis',
   statsEl: statsBestEl,
 })
-constraintsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
+constraintsCurrentEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
+constraintsBestEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
 
 function fmt(n: number | null | undefined, digits = 2): string {
   if (n == null || !Number.isFinite(n)) return '–'
@@ -186,15 +189,13 @@ function maxUtil(
   return Math.max(...vals)
 }
 
-function renderConstraintColumn(
-  title: string,
+function renderConstraintsInto(
+  el: HTMLElement,
   util: Record<string, number> | undefined,
-): string {
+) {
   if (!util || !Object.keys(util).length) {
-    return `<div class="constraints-col">
-      <h3 class="constraints-col-title">${title}</h3>
-      <p class="empty">Noch keine Auswertung.</p>
-    </div>`
+    el.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
+    return
   }
 
   const groups = CONSTRAINT_GROUPS.map((group) => {
@@ -217,27 +218,16 @@ function renderConstraintColumn(
     </div>`
   }).join('')
 
-  return `<div class="constraints-col">
-    <h3 class="constraints-col-title">${title}</h3>
-    ${groups || '<p class="empty">Keine Nachweise in dieser Auswertung.</p>'}
-  </div>`
+  el.innerHTML =
+    groups || '<p class="empty">Keine Nachweise in dieser Auswertung.</p>'
 }
 
 function renderConstraints(
   current: Record<string, number> | undefined,
   best: Record<string, number> | undefined,
 ) {
-  if (
-    (!current || !Object.keys(current).length) &&
-    (!best || !Object.keys(best).length)
-  ) {
-    constraintsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
-    return
-  }
-  constraintsEl.innerHTML = `<div class="constraints-dual">
-    ${renderConstraintColumn('Aktuelle Iteration', current)}
-    ${renderConstraintColumn('Bestes Ergebnis aller Iterationen', best)}
-  </div>`
+  renderConstraintsInto(constraintsCurrentEl, current)
+  renderConstraintsInto(constraintsBestEl, best)
 }
 
 function onEvent(ev: OptEvent) {
@@ -339,7 +329,8 @@ startBtn.addEventListener('click', async () => {
     idPrefix: 'best',
     statsEl: statsBestEl,
   })
-  constraintsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
+  constraintsCurrentEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
+  constraintsBestEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
 
   try {
     await runOptimize(readRequest(), onEvent, abort.signal)
