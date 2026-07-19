@@ -165,9 +165,9 @@ app.innerHTML = `
           <h3>Infobox „Ergebnisse“</h3>
           <p>
             Hier werden die wichtigsten Informationen zur aktuellen Iteration und der
-            insgesamt besten Iteration dargestellt. Links ist zu sehen, wie sich mit
-            jeder neuen Iteration die Werte der Variablen ändern und somit auch die
-            Ausnutzungen der Nachweise darunter variieren. Der bisher beste Entwurf wird
+            insgesamt besten Iteration dargestellt. In der linken Spalte ist zu sehen,
+            wie sich mit jeder neuen Iteration die Werte der Variablen ändern und somit
+            auch die Ausnutzungen der Nachweise darunter variieren. Der bisher beste Entwurf wird
             auf der rechten Seite dargestellt. Der Gesamtwert der Zielfunktion eines
             Entwurfs wird durch die eingesetzten Materialvolumina und die zugehörigen
             GWP-Werte berechnet. Sind einzelne Nachweise nicht eingehalten
