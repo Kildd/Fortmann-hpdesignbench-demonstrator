@@ -343,7 +343,6 @@ function onEvent(ev: OptEvent) {
       })
       objBestEl.textContent = fmt(ev.best.y_p)
       objBestTrialEl.textContent = ` (Iteration ${ev.best.trial + 1})`
-      trialVal.textContent = String(ev.best.trial + 1)
       renderConstraints(lastCurrentUtil, ev.best.utilizations)
     }
   }
