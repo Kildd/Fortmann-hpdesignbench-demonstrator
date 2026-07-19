@@ -63,8 +63,20 @@ app.innerHTML = `
   <header class="hero">
     <h1 class="brand">HPDesignBench Demonstrator</h1>
     <p class="subtitle">
-      Stellen Sie Spannweite, Nutzlast und Evaluationsbudget ein und starten Sie
-      eine TPE-Optimierung der vorgespannte Carbonbeton-HP-Schale.
+      Dieser Demonstrator steht im Zusammenhang mit dem Förderantrag
+      „SlabDesignBench – Eine offene Forschungsplattform zur datenbasierten
+      Optimierung von Stahlbeton-Geschossdecken hinsichtlich Kosten und
+      CO<sub>2</sub>-Emissionen“ bei der Fritz und Trude Fortmann-Stiftung.
+      Er soll anhand eines vereinfachten Optimierungs-Skripts für HP-Schalen
+      als Deckenelemente die grundsätzliche Machbarkeit eines solchen Werkzeugs
+      demonstrieren. Weil die Laufzeit des Tools im Browser deutlich länger ist,
+      kann es sein, dass im festgelegten Evaluationsbudget kein Entwurf gefunden
+      wird, der alle Nebenbedingungen erfüllt.
+    </p>
+    <p class="lead">
+      Funktionsweise eines Werkzeugs zur Strukturoptimierung von Betondecken am
+      Beispiel der HP-Schale. Die blauen Infoboxen beschreiben die wichtigsten
+      Ein- und Ausgabepunkte.
     </p>
   </header>
 
@@ -131,10 +143,10 @@ app.innerHTML = `
 
   <footer class="footer">
     <p>
-      Eigenständige Kopie der Analysemethoden für HP-Schalen (Carbonbeton, TPE-Suche).
-      Nicht an das laufende
-      <a href="https://github.com/Kildd/hpdesignbench" target="_blank" rel="noreferrer">HPDesignBench</a>-Repository gekoppelt.
-      Konzept nach Melcer / TU Berlin.
+      Dieses Web-Tool basiert auf mehreren Masterarbeiten und Forschungsaktivitäten
+      am Fachgebiet Massivbau an der Technischen Universität Berlin.
+      Kontakt:
+      <a href="mailto:m.dombrowski@tu-berlin.de">m.dombrowski@tu-berlin.de</a>
     </p>
   </footer>
 `

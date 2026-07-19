@@ -63,9 +63,17 @@ body {
 
 .subtitle {
   margin: 0;
-  max-width: 40rem;
+  max-width: 52rem;
   color: var(--muted);
-  font-size: 1.05rem;
+  font-size: 1.02rem;
+}
+
+.lead {
+  margin: 0.35rem 0 0;
+  max-width: 52rem;
+  color: var(--ink);
+  font-size: 0.98rem;
+  font-weight: 500;
 }
 
 .layout {
@@ -403,7 +411,7 @@ td.mono,
   margin-top: 1.5rem;
   color: var(--muted);
   font-size: 0.85rem;
-  max-width: 48rem;
+  max-width: 52rem;
 }
 
 .footer a {
