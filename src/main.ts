@@ -73,11 +73,6 @@ app.innerHTML = `
       kann es sein, dass im festgelegten Evaluationsbudget kein Entwurf gefunden
       wird, der alle Nebenbedingungen erfüllt.
     </p>
-    <p class="lead">
-      Funktionsweise eines Werkzeugs zur Strukturoptimierung von Betondecken am
-      Beispiel der HP-Schale. Die blauen Infoboxen beschreiben die wichtigsten
-      Ein- und Ausgabepunkte.
-    </p>
   </header>
 
   <div class="layout">
