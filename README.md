@@ -58,4 +58,4 @@ npm run optimize:smoke
 
 ## Credits
 
-Analyselogik adaptiert aus dem HPDesignBench-/SlabDesignBench-Ökosystem (Melcer, TU Berlin; Framework-Anteile Dombrowski; Penalty-Formulierung nach Loutfi).
+Analyselogik adaptiert aus dem HPDesignBench-/SlabDesignBench-Ökosystem (Loutfi, Melcer, Dombrowski @ TU Berlin Fachgebiet Entwerfen und Konstruieren – Massivbau).
