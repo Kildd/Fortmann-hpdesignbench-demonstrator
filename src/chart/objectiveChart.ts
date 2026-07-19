@@ -26,7 +26,7 @@ export function createObjectiveChart(el: HTMLElement) {
       x: { time: false },
       y: {
         auto: false,
-        range: [0, 10000],
+        range: [0, 100000],
       },
     },
     series: [
