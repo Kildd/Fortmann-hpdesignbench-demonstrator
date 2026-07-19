@@ -69,7 +69,7 @@ app.innerHTML = `
       CO<sub>2</sub>-Emissionen“ bei der Fritz und Trude Fortmann-Stiftung.
       Er soll anhand eines vereinfachten Optimierungs-Skripts für HP-Schalen
       als Deckenelemente die grundsätzliche Machbarkeit eines solchen Werkzeugs
-      demonstrieren. Weil die Laufzeit des Tools im Browser deutlich länger ist,
+      demonstrieren. Weil die Laufzeit einer Iteration im Browser deutlich erhöht ist,
       kann es sein, dass im festgelegten Evaluationsbudget kein Entwurf gefunden
       wird, der alle Nebenbedingungen erfüllt.
     </p>
