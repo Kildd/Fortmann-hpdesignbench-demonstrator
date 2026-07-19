@@ -182,8 +182,7 @@ app.innerHTML = `
           <h3>Vergleich der Entwürfe</h3>
           <p>
             Links ist der aktuelle Entwurf, rechts der beste bisher gefundene zulässige
-            Entwurf dargestellt. Nicht zulässige Entwürfe werden intern mit einem
-            Strafterm belegt und nicht als bester zulässiger Entwurf angezeigt.
+            Entwurf dargestellt. Zulässige Entwürfe müssen alle Nachweise erfüllen.
           </p>
         </aside>
       </div>
