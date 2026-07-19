@@ -180,6 +180,7 @@ app.innerHTML = `
               <h3 class="section-subhead">Zielgröße</h3>
               <p class="objective-value">
                 <strong id="gwpBest">–</strong> ${UNIT_CO2}
+                <span id="gwpBestTrial" class="obj-best-trial"></span>
               </p>
               <h3 class="section-subhead">Optimierungsvariablen</h3>
               <div id="statsBest" class="section-stats-host"></div>
@@ -221,6 +222,7 @@ const objBestEl = document.querySelector<HTMLElement>('#objBest')!
 const objBestTrialEl = document.querySelector<HTMLElement>('#objBestTrial')!
 const gwpCurrentEl = document.querySelector<HTMLElement>('#gwpCurrent')!
 const gwpBestEl = document.querySelector<HTMLElement>('#gwpBest')!
+const gwpBestTrialEl = document.querySelector<HTMLElement>('#gwpBestTrial')!
 const objFeasibleBadge = document.querySelector<HTMLElement>('#objFeasibleBadge')!
 const trialVal = document.querySelector<HTMLElement>('#trialVal')!
 const trialTotal = document.querySelector<HTMLElement>('#trialTotal')!
@@ -291,12 +293,14 @@ function showBestEmpty() {
   constraintsBestEl.innerHTML = ''
   statsBestEl.innerHTML = ''
   gwpBestEl.textContent = '–'
+  gwpBestTrialEl.textContent = ''
 }
 
 function showBestDesign(best: BestState) {
   bestPlaceholder.hidden = true
   bestContent.hidden = false
   gwpBestEl.textContent = fmtY(best.y)
+  gwpBestTrialEl.textContent = `(Iteration ${best.trial + 1})`
   drawCrossSection(sectionBestEl, best.geometry, {
     idPrefix: 'best',
     ariaLabel: 'Querschnitt bester zulässiger Entwurf',
@@ -486,6 +490,7 @@ startBtn.addEventListener('click', async () => {
   setBestObjective(null)
   gwpCurrentEl.textContent = '–'
   gwpBestEl.textContent = '–'
+  gwpBestTrialEl.textContent = ''
   setFeasibleBadge(null)
   trialVal.textContent = '–'
   trialTotal.textContent = '–'
