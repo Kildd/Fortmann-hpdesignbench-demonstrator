@@ -17,11 +17,6 @@ function clampY(v: number | null): number | null {
   return Math.min(v, Y_MAX)
 }
 
-function xScaleMax(lastTrial: number | undefined): number {
-  if (lastTrial == null || !Number.isFinite(lastTrial)) return X_MIN_SPAN
-  return Math.max(X_MIN_SPAN, lastTrial)
-}
-
 function drawUpArrow(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -58,9 +53,12 @@ export function createObjectiveChart(el: HTMLElement) {
     scales: {
       x: {
         time: false,
-        auto: false,
-        // Initial span; push/reset keep this in sync via setScale.
-        range: [1, X_MIN_SPAN],
+        // Must be a function: a fixed [1, 10] array is reapplied on every
+        // setData/setScale and permanently locks the axis.
+        range: (_u, _min, max) => {
+          if (max == null || !Number.isFinite(max)) return [1, X_MIN_SPAN]
+          return [1, Math.max(X_MIN_SPAN, max)]
+        },
       },
       y: {
         auto: false,
@@ -151,7 +149,6 @@ export function createObjectiveChart(el: HTMLElement) {
       rawBest.length = 0
       bestValue = null
       plot.setData(data)
-      plot.setScale('x', { min: 1, max: X_MIN_SPAN })
     },
     push(p: ChartPoint) {
       if (p.best != null && Number.isFinite(p.best)) bestValue = p.best
@@ -161,10 +158,6 @@ export function createObjectiveChart(el: HTMLElement) {
       rawCurrent.push(p.current)
       rawBest.push(bestValue)
       plot.setData(data)
-      plot.setScale('x', {
-        min: 1,
-        max: xScaleMax(data[0][data[0].length - 1]),
-      })
     },
     destroy() {
       window.removeEventListener('resize', resize)
