@@ -147,7 +147,8 @@ app.innerHTML = `
             Die Punkte zeigen die bewerteten Entwürfe. Grau kennzeichnet unzulässige
             Entwürfe mit nicht erfüllten Nachweisen, blaue Punkte kennzeichnen
             zulässige Entwürfe, die alle Nachweise erfüllen. Die rote Linie zeigt das
-            niedrigste Treibhausgaspotenzial der bisher gefundenen zulässigen Entwürfe.
+            niedrigste Treibhausgaspotenzial der bis zur jeweiligen Iteration
+            gefundenen zulässigen Entwürfe.
           </p>
         </aside>
       </div>
