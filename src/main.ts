@@ -75,9 +75,9 @@ app.innerHTML = `
       Entwurfsproblemen mit der automatisierten Bemessung durch einen Optimierungsalgorithmus.
     </p>
     <p class="subtitle">
-      Im beantragten Projekt wird diese Methodik auf Stahlbeton-Geschossdecken übertragen. Die
-      Browser-Version ist auf die CO<sub>2</sub>-Optimierung, ausgewählte Nachweise und eine begrenzte
-      Anzahl von Iterationen beschränkt.
+      Im beantragten Projekt wird diese Methodik zunächst auf Stahlbeton-Geschossdecken
+      übertragen. Die Browser-Version ist auf die CO<sub>2</sub>-Optimierung, ausgewählte Nachweise
+      und wegen ihrer erhöhten Laufzeit auf eine begrenzte Anzahl von Iterationen beschränkt.
     </p>
   </header>
 
