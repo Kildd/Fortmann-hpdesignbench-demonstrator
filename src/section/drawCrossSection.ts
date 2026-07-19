@@ -251,5 +251,18 @@ export function drawCrossSection(
     svg.appendChild(c)
   }
 
+  const caption = document.createElementNS(NS, 'text')
+  caption.setAttribute('x', String(W - 10))
+  caption.setAttribute('y', String(H - 8))
+  caption.setAttribute('text-anchor', 'end')
+  caption.setAttribute('fill', '#5a6268')
+  caption.setAttribute('font-size', '11')
+  caption.setAttribute(
+    'font-family',
+    '"IBM Plex Sans", "Segoe UI", sans-serif',
+  )
+  caption.textContent = 'Querschnitt in Elementmitte'
+  svg.appendChild(caption)
+
   renderStats(options.statsEl, g)
 }
