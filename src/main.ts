@@ -72,7 +72,7 @@ app.innerHTML = `
       Trude Fortmann-Stiftung zeigt anhand eines vorhandenen
       Optimierungswerkzeugs für HP-Schalen die grundsätzliche Machbarkeit des
       Vorhabens. Das Vorstudienmodell verbindet die parametrische Definition von
-      Entwurfsproblemen mit der automatisierten Bemessung durch Optimierungsalgorithmen.
+      Entwurfsproblemen mit der automatisierten Bemessung durch einen Optimierungsalgorithmus.
     </p>
     <p class="subtitle">
       Im beantragten Projekt wird diese Methodik auf Stahlbeton-Geschossdecken übertragen. Die
