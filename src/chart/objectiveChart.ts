@@ -42,13 +42,13 @@ export function createObjectiveChart(el: HTMLElement) {
     series: [
       {},
       {
-        label: 'y',
+        label: 'y (unbestraft)',
         stroke: '#1f91cc',
         width: 2,
         points: { show: false },
       },
       {
-        label: 'y_p (best)',
+        label: 'y_p (bestraft, best)',
         stroke: '#c40d20',
         width: 2,
         points: { show: false },

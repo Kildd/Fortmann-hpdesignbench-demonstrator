@@ -22,7 +22,7 @@ type WorkerIn =
 
 const PYODIDE_INDEX = 'https://cdn.jsdelivr.net/pyodide/v0.27.5/full/'
 /** Bump when engine files change so GitHub Pages / browser caches cannot serve stale Python. */
-const ENGINE_REV = '2026-07-19d'
+const ENGINE_REV = '2026-07-19e'
 
 let pyodide: PyodideInterface | null = null
 let ready = false

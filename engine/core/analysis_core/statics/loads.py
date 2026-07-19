@@ -192,6 +192,8 @@ class LoadsEC(Loads):
         "C": {"psi": (0.7, 0.7, 0.6), "Qk": {1: 3.0, 2: 4.0, 3: 5.0, 4: 5.0, 5: 5.0, 6: 7.5}},
         "D": {"psi": (0.7, 0.7, 0.6), "Qk": {1: 2.0, 2: 5.0, 3: 5.0}},
         "E": {"psi": (1.0, 0.9, 0.8), "Qk": {1: 5.0, 2: 6.0, 3: 7.5}},
+        # Demonstrator-Shortcut „T2“ (5,0 kN/m²) – nicht EC0-Standardbuchstabe.
+        "T": {"psi": (0.7, 0.7, 0.6), "Qk": {2: 5.0}},
     }
 
     @property

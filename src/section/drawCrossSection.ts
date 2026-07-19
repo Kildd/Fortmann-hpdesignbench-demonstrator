@@ -49,7 +49,6 @@ function tendonPoints(B: number, L: number, Hx: number, Hy: number, dy: number, 
     for (let i = 0; i < n; i++) alphas.push(alphaEdge + dAlpha * i)
   }
 
-  // At mid-span x = 0: interpolate between tendon ends at ±L/2
   const pts: Pt[] = []
   for (const alpha of alphas) {
     const y0 = (-L / 2 / xp + 2 * alpha - 1) * yp
@@ -66,7 +65,7 @@ function tendonPoints(B: number, L: number, Hx: number, Hy: number, dy: number, 
     const y = 0.5 * (y0 + y1)
     const z = 0.5 * (z0 + z1)
     pts.push({ y, z })
-    pts.push({ y: -y, z }) // mirrored group
+    pts.push({ y: -y, z })
   }
   return pts
 }
@@ -74,6 +73,49 @@ function tendonPoints(B: number, L: number, Hx: number, Hy: number, dy: number, 
 export type DrawSectionOptions = {
   ariaLabel?: string
   idPrefix?: string
+  /** Host element for the two-column variable readout under the SVG. */
+  statsEl?: HTMLElement | null
+}
+
+function fmtVal(n: number, digits = 1): string {
+  if (!Number.isFinite(n)) return '–'
+  return n.toFixed(digits)
+}
+
+function renderStats(el: HTMLElement | null | undefined, g: GeometryState | null): void {
+  if (!el) return
+  if (!g) {
+    el.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
+    return
+  }
+  const hGes = num(g.h_ges_mm, NaN)
+  const t = num(g.t_mm, NaN)
+  const nt = Math.max(1, Math.round(num(g.nt, NaN)))
+  const dy = num(g.dy_mm, NaN)
+  const fck = num(g.fck, NaN)
+  const kap = num(g.kap_t_percent, NaN)
+
+  const items: [string, string][] = [
+    ['Querschnittshöhe', Number.isFinite(hGes) ? `${fmtVal(hGes, 0)} mm` : '–'],
+    ['Querschnittsdicke', Number.isFinite(t) ? `${fmtVal(t, 0)} mm` : '–'],
+    [
+      'Anzahl Spannglieder',
+      Number.isFinite(nt) ? `${nt} je Seite (Σ ${2 * nt})` : '–',
+    ],
+    ['Randabstand Spannglieder', Number.isFinite(dy) ? `${fmtVal(dy, 0)} mm` : '–'],
+    ['Betongüte', Number.isFinite(fck) ? `C${fmtVal(fck, 0)}` : '–'],
+    [
+      'Vorspanngrad Spannglieder',
+      Number.isFinite(kap) ? `${fmtVal(kap, 0)} %` : '–',
+    ],
+  ]
+
+  el.innerHTML = `<dl class="section-stats">${items
+    .map(
+      ([label, value]) =>
+        `<div><dt>${label}</dt><dd class="mono">${value}</dd></div>`,
+    )
+    .join('')}</dl>`
 }
 
 /** Parametric HP mid-span cross-section: shell + reinforcement only. */
@@ -86,7 +128,7 @@ export function drawCrossSection(
   while (svg.firstChild) svg.removeChild(svg.firstChild)
 
   const W = 640
-  const H = 360
+  const H = 300
   const id = options.idPrefix ?? 'sec'
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
   svg.setAttribute('role', 'img')
@@ -111,7 +153,7 @@ export function drawCrossSection(
   bg.setAttribute('fill', `url(#${id}-bg)`)
   svg.appendChild(bg)
 
-  const span = num(g?.span_mm, 8000)
+  const span = num(g?.span_mm, 6450)
   const B = num(g?.b_mm, 1350)
   const hGes = num(g?.h_ges_mm, 300)
   const hxRatio = num(g?.hx_hges_ratio, 0.2)
@@ -136,24 +178,21 @@ export function drawCrossSection(
     minZ = Math.min(minZ, p.z)
     maxZ = Math.max(maxZ, p.z)
   }
-  // Include bar radius in bounds
   minZ -= dBar
   maxZ += dBar
 
   const padX = 36
-  const padTop = 28
-  const padBot = 36
+  const padTop = 24
+  const padBot = 24
   const drawW = W - padX * 2
   const drawH = H - padTop - padBot
   const spanY = Math.max(maxY - minY, 1)
   const spanZ = Math.max(maxZ - minZ, 1)
-  // Uniform mm scale so height vs width proportions stay correct
   const scale = Math.min(drawW / spanY, drawH / spanZ)
 
   const midY = (minY + maxY) / 2
   const midZ = (minZ + maxZ) / 2
   const toX = (y: number) => W / 2 + (y - midY) * scale
-  // SVG y grows downward; structural z grows upward
   const toY = (z: number) => padTop + drawH / 2 - (z - midZ) * scale
 
   const d = [
@@ -181,14 +220,5 @@ export function drawCrossSection(
     svg.appendChild(c)
   }
 
-  const label = document.createElementNS(NS, 'text')
-  label.setAttribute('x', String(padX))
-  label.setAttribute('y', String(H - 12))
-  label.setAttribute('fill', '#2f363b')
-  label.setAttribute('font-family', '"IBM Plex Mono", ui-monospace, monospace')
-  label.setAttribute('font-size', '11')
-  const kap = num(g?.kap_t_percent, 0)
-  const fck = num(g?.fck, 30)
-  label.textContent = `H_y=${Hy.toFixed(0)} · t=${t.toFixed(0)} · n_t=${nt} (Σ ${2 * nt}) · d=${dBar.toFixed(1)} · f_ck=${fck} · κ_t=${kap}%`
-  svg.appendChild(label)
+  renderStats(options.statsEl, g)
 }

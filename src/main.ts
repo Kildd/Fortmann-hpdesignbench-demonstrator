@@ -2,7 +2,60 @@ import './style.css'
 import { createObjectiveChart } from './chart/objectiveChart'
 import { preloadBrowserEngine, runOptimize } from './optimizer/runOptimize'
 import { drawCrossSection } from './section/drawCrossSection'
-import type { BestState, OptEvent, OptimizeRequest } from './types'
+import type { OptEvent, OptimizeRequest } from './types'
+
+const UNIT_CO2 = 'kg CO₂-äquivalent/m²'
+
+/** Ordered constraint groups for the layperson UI (Z1–Z3 are hidden). */
+const CONSTRAINT_GROUPS: {
+  title: string
+  items: { key: string | string[]; label: string }[]
+}[] = [
+  {
+    title: '1. Grenzzustand der Tragfähigkeit',
+    items: [{ key: 'A_bending_capacity', label: '1.1 Biegetragfähigkeit' }],
+  },
+  {
+    title: '2. Grenzzustand der Gebrauchstauglichkeit',
+    items: [
+      {
+        key: [
+          'B1a_deflection_by_wmax_capacity',
+          'B1b_deflection_by_mcr_capacity',
+        ],
+        label: '2.1 Verformungsbegrenzung',
+      },
+      {
+        key: [
+          'B2a_failure_announcement_by_wmin_capacity',
+          'B2b_failure_announcement_by_mcr_capacity',
+        ],
+        label: '2.2 Versagensankündigung',
+      },
+    ],
+  },
+  {
+    title: '3. Konstruktive Durchbildung',
+    items: [
+      { key: 'C1_concrete_cover_capacity', label: '3.1 Betondeckung' },
+      { key: 'C2_clear_spacing_capacity', label: '3.2 Abstand Spannglieder' },
+      { key: 'C3_shell_thickness_capacity', label: '3.3 Mindestschalendicke' },
+    ],
+  },
+  {
+    title: '4. Bauakustik',
+    items: [
+      {
+        key: 'D1_airborne_sound_insulation_capacity',
+        label: '4.1 Luftschalldämmaß',
+      },
+      {
+        key: 'D2_impact_sound_insulation_capacity',
+        label: '4.2 Trittschallpegel',
+      },
+    ],
+  },
+]
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -10,8 +63,8 @@ app.innerHTML = `
   <header class="hero">
     <h1 class="brand">HPDesignBench Demonstrator</h1>
     <p class="subtitle">
-      Stellen Sie die Ausgangsparameter ein und starten Sie eine TPE-Optimierung.
-      Beobachten Sie, wie Variablen, Nebenbedingungen und Ziele sich ändern – inklusive Querschnitt.
+      Stellen Sie Spannweite, Nutzlast und Evaluationsbudget ein und starten Sie
+      eine TPE-Optimierung der vorgespannte Carbonbeton-HP-Schale.
     </p>
   </header>
 
@@ -19,34 +72,25 @@ app.innerHTML = `
     <aside class="panel">
       <h2>Eingaben</h2>
       <div class="field">
-        <label for="spanMm">Spannweite L [mm]</label>
-        <input id="spanMm" type="number" min="4000" max="12000" step="100" value="8000" />
-      </div>
-      <div class="field">
-        <label for="loadCategory">Nutzlastkategorie</label>
-        <select id="loadCategory">
-          <option value="A1">A1</option>
-          <option value="A2">A2</option>
-          <option value="A3">A3</option>
-          <option value="B1">B1</option>
-          <option value="B2" selected>B2</option>
-          <option value="B3">B3</option>
-          <option value="C1">C1</option>
-          <option value="C2">C2</option>
-          <option value="C3">C3</option>
+        <label for="spanMm">Spannweite</label>
+        <select id="spanMm">
+          <option value="5100">5,10 m</option>
+          <option value="6450" selected>6,45 m</option>
+          <option value="7900">7,90 m</option>
         </select>
       </div>
       <div class="field">
-        <label for="omegaGwp">Gewicht Ω<sub>GWP</sub></label>
-        <input id="omegaGwp" type="number" min="0" max="2" step="0.5" value="1" />
-      </div>
-      <div class="field">
-        <label for="omegaCost">Gewicht Ω<sub>Kosten</sub></label>
-        <input id="omegaCost" type="number" min="0" max="2" step="0.5" value="0" />
+        <label for="loadCategory">Nutzlastkategorie nach Eurocode 1</label>
+        <select id="loadCategory">
+          <option value="A2">A2: 1,5 kN/m²</option>
+          <option value="B2" selected>B2: 3,0 kN/m²</option>
+          <option value="T2">T2: 5,0 kN/m²</option>
+        </select>
       </div>
       <div class="field">
         <label for="nTrials">Evaluationsbudget</label>
-        <input id="nTrials" type="number" min="10" max="200" step="10" value="60" />
+        <input id="nTrials" type="number" min="20" max="1000" step="10" value="60" />
+        <p class="hint">Ganzzahl zwischen 20 und 1000</p>
       </div>
       <div class="actions">
         <button class="primary" id="startBtn" type="button">Optimierung starten</button>
@@ -58,34 +102,30 @@ app.innerHTML = `
     <main class="stage">
       <section class="sections-row">
         <div class="section-wrap">
-          <h2>Querschnitt · aktueller Trial</h2>
+          <h2>Querschnitt – aktuelle Iteration</h2>
           <svg id="sectionCurrent"></svg>
+          <div id="statsCurrent" class="section-stats-host"></div>
         </div>
         <div class="section-wrap">
-          <h2>Querschnitt · best-so-far</h2>
+          <h2>Querschnitt – bestes Ergebnis aller Iterationen</h2>
           <svg id="sectionBest"></svg>
+          <div id="statsBest" class="section-stats-host"></div>
         </div>
       </section>
 
       <section class="card">
-        <h2>Ziele</h2>
-        <div class="obj-row">
-          <div><span>y</span> <strong id="yVal">–</strong></div>
-          <div><span>y<sub>p</sub></span> <strong id="ypVal">–</strong></div>
-          <div><span>Trial</span> <strong id="trialVal">–</strong></div>
+        <h2>Zielfunktion</h2>
+        <div class="obj-explain" id="objExplain">
+          <p>Unbestrafte Zielfunktion: y = <strong id="yVal">–</strong> ${UNIT_CO2}</p>
+          <p>Bestrafte Zielfunktion: y<sub>p</sub> = <strong id="ypVal">–</strong> ${UNIT_CO2}</p>
+          <p class="obj-trial">Iteration: <strong id="trialVal">–</strong></p>
         </div>
         <div id="chart"></div>
       </section>
 
-      <section class="metrics">
-        <div class="card">
-          <h2>Nebenbedingungen (Ausnutzung)</h2>
-          <div id="constraints"></div>
-        </div>
-        <div class="card">
-          <h2>Entwurfsvariablen · best-so-far</h2>
-          <div id="vars"></div>
-        </div>
+      <section class="card">
+        <h2>Nebenbedingungen (Nachweise)</h2>
+        <div id="constraints"></div>
       </section>
     </main>
   </div>
@@ -102,71 +142,77 @@ app.innerHTML = `
 
 const sectionCurrentEl = document.querySelector<SVGSVGElement>('#sectionCurrent')!
 const sectionBestEl = document.querySelector<SVGSVGElement>('#sectionBest')!
+const statsCurrentEl = document.querySelector<HTMLElement>('#statsCurrent')!
+const statsBestEl = document.querySelector<HTMLElement>('#statsBest')!
 const statusEl = document.querySelector<HTMLElement>('#status')!
 const startBtn = document.querySelector<HTMLButtonElement>('#startBtn')!
 const stopBtn = document.querySelector<HTMLButtonElement>('#stopBtn')!
 const yVal = document.querySelector<HTMLElement>('#yVal')!
 const ypVal = document.querySelector<HTMLElement>('#ypVal')!
 const trialVal = document.querySelector<HTMLElement>('#trialVal')!
-const varsEl = document.querySelector<HTMLElement>('#vars')!
 const constraintsEl = document.querySelector<HTMLElement>('#constraints')!
 const chart = createObjectiveChart(document.querySelector<HTMLElement>('#chart')!)
 
-let labels = {
-  vars: {} as Record<string, string>,
-  constraints: {} as Record<string, string>,
-}
 let abort: AbortController | null = null
 
 drawCrossSection(sectionCurrentEl, null, {
   idPrefix: 'cur',
-  ariaLabel: 'Querschnitt aktueller Trial',
+  ariaLabel: 'Querschnitt aktuelle Iteration',
+  statsEl: statsCurrentEl,
 })
 drawCrossSection(sectionBestEl, null, {
   idPrefix: 'best',
-  ariaLabel: 'Querschnitt best-so-far',
+  ariaLabel: 'Querschnitt bestes Ergebnis',
+  statsEl: statsBestEl,
 })
 constraintsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
-varsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
 
-function fmt(n: number | null | undefined, digits = 3): string {
+function fmt(n: number | null | undefined, digits = 2): string {
   if (n == null || !Number.isFinite(n)) return '–'
-  if (Math.abs(n) >= 1000) return n.toExponential(3)
+  if (Math.abs(n) >= 1000) return n.toExponential(2)
   return n.toFixed(digits)
 }
 
-function renderVars(best: BestState | null, varLabels: Record<string, string>) {
-  if (!best) {
-    varsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
-    return
-  }
-  const rows = Object.entries(best.vars)
-    .map(
-      ([k, v]) =>
-        `<tr><td>${varLabels[k] ?? k}</td><td class="mono">${typeof v === 'number' ? fmt(v, 2) : v}</td></tr>`,
-    )
-    .join('')
-  varsEl.innerHTML = `<table><thead><tr><th>Variable</th><th>Wert</th></tr></thead><tbody>${rows}</tbody></table>`
+function maxUtil(
+  util: Record<string, number>,
+  keys: string | string[],
+): number | null {
+  const list = Array.isArray(keys) ? keys : [keys]
+  const vals = list
+    .map((k) => util[k])
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+  if (!vals.length) return null
+  return Math.max(...vals)
 }
 
-function renderConstraints(
-  util: Record<string, number> | undefined,
-  constraintLabels: Record<string, string>,
-) {
+function renderConstraints(util: Record<string, number> | undefined) {
   if (!util || !Object.keys(util).length) {
     constraintsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
     return
   }
-  const rows = Object.entries(util)
-    .map(([k, v]) => {
-      const ok = v <= 1
-      return `<tr>
-        <td>${constraintLabels[k] ?? k}</td>
-        <td><span class="pill ${ok ? 'ok' : 'bad'}">${fmt(v, 3)}</span></td>
-      </tr>`
-    })
-    .join('')
-  constraintsEl.innerHTML = `<table><thead><tr><th>Check</th><th>u</th></tr></thead><tbody>${rows}</tbody></table>`
+
+  const html = CONSTRAINT_GROUPS.map((group) => {
+    const rows = group.items
+      .map((item) => {
+        const u = maxUtil(util, item.key)
+        if (u == null) return ''
+        const ok = u <= 1
+        return `<div class="check-row">
+          <span class="check-label">${item.label}</span>
+          <span class="pill ${ok ? 'ok' : 'bad'}" title="Ausnutzung u ≤ 1 ist erfüllt">${fmt(u, 3)}</span>
+        </div>`
+      })
+      .filter(Boolean)
+      .join('')
+    if (!rows) return ''
+    return `<div class="check-group">
+      <h3>${group.title}</h3>
+      ${rows}
+    </div>`
+  }).join('')
+
+  constraintsEl.innerHTML =
+    html || '<p class="empty">Keine Nachweise in dieser Auswertung.</p>'
 }
 
 function onEvent(ev: OptEvent) {
@@ -179,10 +225,8 @@ function onEvent(ev: OptEvent) {
     return
   }
   if (ev.type === 'start') {
-    labels = { vars: ev.var_labels, constraints: ev.constraint_labels }
     chart.reset()
-    const integ = ev.integrator ?? 'fiber'
-    statusEl.textContent = `TPE läuft · ${ev.n_trials} Trials · Integrator: ${integ}`
+    statusEl.textContent = `Optimierung läuft · ${ev.n_trials} Iterationen`
     return
   }
   if (ev.type === 'trial') {
@@ -192,7 +236,8 @@ function onEvent(ev: OptEvent) {
 
     drawCrossSection(sectionCurrentEl, ev.geometry, {
       idPrefix: 'cur',
-      ariaLabel: 'Querschnitt aktueller Trial',
+      ariaLabel: 'Querschnitt aktuelle Iteration',
+      statsEl: statsCurrentEl,
     })
 
     chart.push({
@@ -206,38 +251,46 @@ function onEvent(ev: OptEvent) {
     if (ev.best) {
       drawCrossSection(sectionBestEl, ev.best.geometry, {
         idPrefix: 'best',
-        ariaLabel: 'Querschnitt best-so-far',
+        ariaLabel: 'Querschnitt bestes Ergebnis',
+        statsEl: statsBestEl,
       })
-      renderVars(ev.best, labels.vars)
-      renderConstraints(ev.best.utilizations, labels.constraints)
+      renderConstraints(ev.best.utilizations)
     }
     statusEl.textContent = ev.is_best
-      ? `Trial ${ev.trial + 1} · neues Best-so-far · Integrator: fiber`
-      : `Trial ${ev.trial + 1} · Integrator: fiber`
+      ? `Iteration ${ev.trial + 1} · neues bestes Ergebnis`
+      : `Iteration ${ev.trial + 1}`
     return
   }
   if (ev.type === 'done') {
     statusEl.textContent = ev.best
-      ? `Fertig · bestes y_p = ${fmt(ev.best.y_p)} (Trial ${ev.best.trial + 1})`
+      ? `Fertig · bestes y_p = ${fmt(ev.best.y_p)} ${UNIT_CO2} (Iteration ${ev.best.trial + 1})`
       : 'Fertig · keine gültige Lösung'
     if (ev.best) {
       drawCrossSection(sectionBestEl, ev.best.geometry, {
         idPrefix: 'best',
-        ariaLabel: 'Querschnitt best-so-far',
+        ariaLabel: 'Querschnitt bestes Ergebnis',
+        statsEl: statsBestEl,
       })
-      renderVars(ev.best, labels.vars)
-      renderConstraints(ev.best.utilizations, labels.constraints)
+      renderConstraints(ev.best.utilizations)
+      if (ev.best.y != null) yVal.textContent = fmt(ev.best.y)
+      if (ev.best.y_p != null) ypVal.textContent = fmt(ev.best.y_p)
+      trialVal.textContent = String(ev.best.trial + 1)
     }
   }
 }
 
 function readRequest(): OptimizeRequest {
+  const nTrials = Math.min(
+    1000,
+    Math.max(20, Math.round(Number(document.querySelector<HTMLInputElement>('#nTrials')!.value))),
+  )
+  document.querySelector<HTMLInputElement>('#nTrials')!.value = String(nTrials)
   return {
-    spanMm: Number(document.querySelector<HTMLInputElement>('#spanMm')!.value),
+    spanMm: Number(document.querySelector<HTMLSelectElement>('#spanMm')!.value),
     loadCategory: document.querySelector<HTMLSelectElement>('#loadCategory')!.value,
-    omegaGwp: Number(document.querySelector<HTMLInputElement>('#omegaGwp')!.value),
-    omegaCost: Number(document.querySelector<HTMLInputElement>('#omegaCost')!.value),
-    nTrials: Number(document.querySelector<HTMLInputElement>('#nTrials')!.value),
+    omegaGwp: 1,
+    omegaCost: 0,
+    nTrials,
     seed: 42,
   }
 }
@@ -252,8 +305,15 @@ startBtn.addEventListener('click', async () => {
   ypVal.textContent = '–'
   trialVal.textContent = '–'
   statusEl.textContent = 'Starte Optimierung…'
-  drawCrossSection(sectionCurrentEl, null, { idPrefix: 'cur' })
-  drawCrossSection(sectionBestEl, null, { idPrefix: 'best' })
+  drawCrossSection(sectionCurrentEl, null, {
+    idPrefix: 'cur',
+    statsEl: statsCurrentEl,
+  })
+  drawCrossSection(sectionBestEl, null, {
+    idPrefix: 'best',
+    statsEl: statsBestEl,
+  })
+  constraintsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
 
   try {
     await runOptimize(readRequest(), onEvent, abort.signal)
@@ -274,7 +334,6 @@ stopBtn.addEventListener('click', () => {
   stopBtn.disabled = true
 })
 
-// Warm Pyodide + packages as soon as the page opens (GitHub Pages path).
 if (!import.meta.env.DEV) {
   startBtn.disabled = true
   statusEl.textContent = 'Browser-Engine wird vorbereitet…'
