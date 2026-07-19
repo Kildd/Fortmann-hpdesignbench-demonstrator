@@ -68,14 +68,16 @@ app.innerHTML = `
     <h1 class="brand">SlabDesignBench – Machbarkeitsdemonstrator</h1>
     <p class="tagline">Vorstudienmodell einer HP-Schale</p>
     <p class="subtitle">
-      Dieser Demonstrator zum Förderantrag „SlabDesignBench“ bei der Fritz und Trude
-      Fortmann-Stiftung zeigt anhand eines vorhandenen Optimierungswerkzeugs für
-      HP-Schalen als Deckenelemente die grundlegende Machbarkeit des Vorhabens.
-      Das vereinfachte Vorstudienmodell verbindet die parametrische Erzeugung von
-      Entwurfsproblemen mit der automatisierten Deckenbemessung mit
-      Optimierungsalgorithmen. Das Modell ist auf CO<sub>2</sub>-Optimierung und
-      ausgewählte Nachweise beschränkt und erlaubt wegen seiner Laufzeit nur eine
-      eingeschränkte Anzahl von Iterationen.
+      Dieser Demonstrator zum Förderantrag „SlabDesignBench“ bei der Fritz und
+      Trude Fortmann-Stiftung zeigt anhand eines vorhandenen
+      Optimierungswerkzeugs für HP-Schalen die grundsätzliche Machbarkeit des
+      Vorhabens. Das Vorstudienmodell verbindet die parametrische Definition von
+      Entwurfsproblemen mit der automatisierten Bemessung durch Optimierungsalgorithmen.
+    </p>
+    <p class="subtitle">
+      Im beantragten Projekt wird diese Methodik auf Stahlbeton-Geschossdecken übertragen. Die
+      Browser-Version ist auf die CO<sub>2</sub>-Optimierung, ausgewählte Nachweise und eine begrenzte
+      Anzahl von Iterationen beschränkt.
     </p>
   </header>
 
@@ -240,8 +242,8 @@ function fmt(n: number | null | undefined, digits = 2): string {
 
 function fmtPct(u: number): string {
   return (u * 100).toLocaleString('de-DE', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
   })
 }
 

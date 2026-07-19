@@ -1,9 +1,9 @@
 # SlabDesignBench – Machbarkeitsdemonstrator
 
 Eigenständiger Web-Demonstrator für die parametrische Bemessung und
-Optimierung einer vorgespannten HP-Schale. Das vorhandene
-Modell dient als technisches Vorstudienmodell für das umfangreichere
-Optimierungswerkzeug „SlabDesignBench“ für die Optimierung von Geschossdecken.
+Optimierung einer vorgespannten HP-Schale. Das vorhandene Modell dient als
+technisches Vorstudienmodell für SlabDesignBench, ein umfangreicheres
+Optimierungswerkzeug für Stahlbeton-Geschossdecken.
 
 ## Unabhängigkeit von HPDesignBench
 

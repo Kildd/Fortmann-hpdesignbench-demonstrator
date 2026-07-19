@@ -11,7 +11,8 @@
     "build": "tsc && vite build",
     "postbuild": "node -e \"const fs=require('fs');const path=require('path');const cp=(s,d)=>{fs.mkdirSync(d,{recursive:true});for(const e of fs.readdirSync(s,{withFileTypes:true})){const a=path.join(s,e.name),b=path.join(d,e.name);e.isDirectory()?cp(a,b):fs.copyFileSync(a,b)}};fs.rmSync('docs',{recursive:true,force:true});cp('dist','docs');fs.writeFileSync('docs/.nojekyll','');console.log('Copied dist -> docs')\"",
     "preview": "vite preview",
-    "optimize:smoke": ".venv\\Scripts\\python.exe engine\\demo_optimize.py --n-trials 5"
+    "optimize:smoke": ".venv\\Scripts\\python.exe engine\\demo_optimize.py --n-trials 5",
+    "test:feasibility": ".venv\\Scripts\\python.exe -m unittest tests.test_feasibility -v"
   },
   "dependencies": {
     "uplot": "^1.6.32"

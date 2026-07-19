@@ -81,6 +81,10 @@ body {
   font-size: 1.02rem;
 }
 
+.subtitle + .subtitle {
+  margin-top: 0.65rem;
+}
+
 .lead {
   margin: 0.35rem 0 0;
   max-width: 52rem;

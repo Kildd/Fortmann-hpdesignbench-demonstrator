@@ -21,6 +21,7 @@
   "core/visualization_core/__init__.py",
   "core/__init__.py",
   "demo_optimize.py",
+  "feasibility.py",
   "integrator_util.py",
   "README.md",
   "requirements-engine.txt",

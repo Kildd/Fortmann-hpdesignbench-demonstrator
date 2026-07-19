@@ -25,6 +25,8 @@ export type BestState = {
   utilizations: Record<string, number>
   geometry: GeometryState
   is_feasible: boolean
+  model_valid?: boolean
+  design_feasible?: boolean
 }
 
 export type StartEvent = {
@@ -50,6 +52,8 @@ export type TrialEvent = {
   error: string | null
   geometry: GeometryState
   is_feasible: boolean
+  model_valid: boolean
+  design_feasible: boolean
   /** New penalized best (internal optimizer metric y_p). */
   is_best: boolean
   best: BestState | null

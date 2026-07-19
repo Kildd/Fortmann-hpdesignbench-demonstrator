@@ -20,33 +20,18 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-FEAS_TOL = 1e-9
-
-
-def _is_feasible(util: dict[str, float], err: str | None) -> bool:
-    """True if every non-modeling constraint utilization is finite and ≤ 1.
-
-    Modeling checks Z1–Z3 are returned by the analysis stack but are hidden in
-    the demonstrator UI and must not block ``bestFeasible`` on their own —
-    otherwise feasible A–D designs are never stored (Z3 is often > 1).
-    """
-    if err is not None:
-        return False
-    checked = 0
-    for name, v in util.items():
-        if str(name).startswith("Z"):
-            continue
-        checked += 1
-        if not math.isfinite(v) or v > 1.0 + FEAS_TOL:
-            return False
-    return checked > 0
-
 ENGINE_ROOT = Path(__file__).resolve().parent
 VENDOR_ROOT = ENGINE_ROOT / "vendor"
 
 for _p in (str(VENDOR_ROOT), str(ENGINE_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+
+from feasibility import (  # noqa: E402
+    assess_feasibility,
+    expected_constraint_names,
+    may_update_best_feasible,
+)
 
 # structuralcodes imports triangle at module import time.
 # Prefer the native Shewchuk package; otherwise use the pure-Python compat shim
@@ -78,11 +63,11 @@ HP_DIR = ENGINE_ROOT / "slab_construction" / "slabs" / "hp_slab"
 
 VAR_LABELS_DE = {
     "geom_h_ges_mm": "Querschnittshöhe",
-    "geom_t_mm": "Querschnittsdicke",
-    "geom_nt": "Anzahl Spannglieder",
-    "geom_dy_mm": "Randabstand Spannglieder",
-    "mat_conc_fck": "Betongüte",
-    "reinf_kap_t_percent": "Vorspanngrad Spannglieder",
+    "geom_t_mm": "Schalendicke",
+    "geom_nt": "Anzahl der Spannglieder",
+    "geom_dy_mm": "Randabstand der Spannglieder",
+    "mat_conc_fck": "Betonfestigkeitsklasse",
+    "reinf_kap_t_percent": "Vorspanngrad der Spannglieder",
     "reinf_a_tex_mm2": "CFRP-Querschnitt A_tex",
     "geom_t_infill_mm": "Fülldicke",
     "geom_t_screed_mm": "Estrichdicke",
@@ -95,9 +80,9 @@ CONSTRAINT_LABELS_DE = {
     "B2a_failure_announcement_by_wmin_capacity": "Versagensankündigung (w_min)",
     "B2b_failure_announcement_by_mcr_capacity": "Versagensankündigung (M_cr)",
     "C1_concrete_cover_capacity": "Betondeckung",
-    "C2_clear_spacing_capacity": "Abstand Spannglieder",
+    "C2_clear_spacing_capacity": "Abstand der Spannglieder",
     "C3_shell_thickness_capacity": "Mindestschalendicke",
-    "D1_airborne_sound_insulation_capacity": "Luftschalldämmaß",
+    "D1_airborne_sound_insulation_capacity": "Luftschalldämmmaß",
     "D2_impact_sound_insulation_capacity": "Trittschallpegel",
     "Z1_nt_dt_combination_capacity": "n_t–d_y Kombination",
     "Z2_beam_theory_H_L_capacity": "Balkentheorie H/L",
@@ -220,7 +205,12 @@ def _evaluate_one(
         err = f"{type(exc).__name__}: {exc}"
         params = dict(params)
 
-    feasible = _is_feasible(util, err)
+    expected = expected_constraint_names(constraints)
+    feas = assess_feasibility(util, error=err, expected=expected)
+    model_valid = feas["model_valid"]
+    design_feasible = feas["design_feasible"]
+    is_feasible = feas["is_feasible"]
+
     decoded_vars = {name: params.get(name) for name in var_names}
     geometry = _geometry_payload(params)
     design = {
@@ -231,7 +221,9 @@ def _evaluate_one(
         "penalties": penalties,
         "utilizations": util,
         "geometry": geometry,
-        "is_feasible": feasible,
+        "is_feasible": is_feasible,
+        "model_valid": model_valid,
+        "design_feasible": design_feasible,
     }
 
     payload: dict[str, Any] = {
@@ -245,7 +237,9 @@ def _evaluate_one(
         "utilizations": util,
         "error": err,
         "geometry": geometry,
-        "is_feasible": feasible,
+        "is_feasible": is_feasible,
+        "model_valid": model_valid,
+        "design_feasible": design_feasible,
     }
 
     is_best = best is None or (math.isfinite(y_p) and y_p < best["y_p"])
@@ -256,11 +250,13 @@ def _evaluate_one(
         payload["is_best"] = False
     payload["best"] = best
 
-    is_best_feasible = False
-    if feasible and math.isfinite(y):
-        if best_feasible is None or y < best_feasible["y"]:
-            best_feasible = dict(design)
-            is_best_feasible = True
+    is_best_feasible = may_update_best_feasible(
+        is_feasible=is_feasible,
+        y=y,
+        best_feasible=best_feasible,
+    )
+    if is_best_feasible:
+        best_feasible = dict(design)
     payload["is_best_feasible"] = is_best_feasible
     payload["bestFeasible"] = best_feasible
 
