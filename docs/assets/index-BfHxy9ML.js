@@ -132,7 +132,7 @@
   <footer class="footer">
     <p>
       Dieses Web-Tool basiert auf mehreren Masterarbeiten und Forschungsaktivitäten
-      am Fachgebiet Massivbau an der Technischen Universität Berlin.
+      am Fachgebiet Entwerfen und Konstruieren - Massivbau an der Technischen Universität Berlin.
       Kontakt:
       <a href="mailto:m.dombrowski@tu-berlin.de">m.dombrowski@tu-berlin.de</a>
     </p>
