@@ -15,7 +15,7 @@ mat_insu_id;catalog;lightweight_mineral_wool; ;;;0;0;0;fixed;str;;
 mat_screed_id;catalog;generic_screed; ;;;0;0;0;fixed;str;;
 insu_mod_damp;catalog;0.01;;;;0;0;0;fixed;float;;
 insu_rw_req_db;catalog;53. | 54. | 55.;;;;0;2;1;fixed;float;;
-insu_lnw_max_db;catalog;46.  | 53.;;;;0;1;1;fixed;float;;
+insu_lnw_max_db;catalog;46. | 53. | 64.;;;;0;2;2;fixed;float;;
 defl_sls_case;catalog;a | b;;;;0;1;0;fixed;str;;
 defl_max_defl_limit;catalog;250. | 500.;;;;0;1;0;fixed;float;;
 defl_max_announce_failure;catalog;100;;;;0;0;0;fixed;float;;

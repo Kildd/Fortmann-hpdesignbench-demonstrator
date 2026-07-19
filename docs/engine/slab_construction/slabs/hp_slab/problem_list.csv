@@ -22,7 +22,7 @@
 1;param;mat_screed_id;fixed;;;0;;;;;1;
 1;param;insu_mod_damp;fixed;;;0;;;;;1;
 1;param;insu_rw_req_db;fixed;;;1;;;;;1;
-1;param;insu_lnw_max_db;fixed;;;1;;;;;1;
+1;param;insu_lnw_max_db;fixed;;;2;;;;;1;
 1;param;defl_sls_case;fixed;;;0;;;;;1;
 1;param;defl_max_defl_limit;fixed;;;0;;;;;1;
 1;param;defl_max_announce_failure;fixed;;;0;;;;;1;
