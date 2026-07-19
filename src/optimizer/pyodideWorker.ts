@@ -22,7 +22,7 @@ type WorkerIn =
 
 const PYODIDE_INDEX = 'https://cdn.jsdelivr.net/pyodide/v0.27.5/full/'
 /** Bump when engine files change so GitHub Pages / browser caches cannot serve stale Python. */
-const ENGINE_REV = '2026-07-19b'
+const ENGINE_REV = '2026-07-19c'
 
 let pyodide: PyodideInterface | null = null
 let ready = false
@@ -41,37 +41,48 @@ async function getPyodide(): Promise<PyodideInterface> {
   return pyodide
 }
 
-async function fetchText(url: string): Promise<string> {
-  const res = await fetch(url, { cache: 'no-store' })
-  if (!res.ok) throw new Error(`Fetch failed: ${url}`)
-  return res.text()
-}
-
 function engineUrl(base: string, rel: string): string {
   const sep = rel.includes('?') ? '&' : '?'
   return `${base}engine/${rel}${sep}v=${ENGINE_REV}`
 }
 
-async function mountEngine(base: string, pd: PyodideInterface): Promise<void> {
-  const res = await fetch(engineUrl(base, 'manifest.json'), { cache: 'no-store' })
-  if (!res.ok) {
-    throw new Error(
-      'engine/manifest.json fehlt – bitte docs neu bauen (npm run build).',
-    )
+async function fetchJson<T>(url: string, retries = 3): Promise<T> {
+  let lastErr: unknown
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return (await res.json()) as T
+    } catch (err) {
+      lastErr = err
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 250 * attempt))
+      }
+    }
   }
-  const files = (await res.json()) as string[]
+  throw new Error(
+    `Fetch failed: ${url}${lastErr instanceof Error ? ` (${lastErr.message})` : ''}`,
+  )
+}
+
+async function mountEngine(base: string, pd: PyodideInterface): Promise<void> {
+  post({ type: 'status', message: 'HP-Engine-Bundle wird geladen…' })
+  const files = await fetchJson<Record<string, string>>(
+    engineUrl(base, 'bundle.json'),
+  )
+  const entries = Object.entries(files)
   pd.FS.mkdirTree('/home/pyodide/engine')
   let done = 0
-  for (const rel of files) {
-    const text = await fetchText(engineUrl(base, rel))
+  for (const [rel, text] of entries) {
     const target = `/home/pyodide/engine/${rel}`
-    pd.FS.mkdirTree(target.slice(0, target.lastIndexOf('/')))
+    const slash = target.lastIndexOf('/')
+    if (slash > 0) pd.FS.mkdirTree(target.slice(0, slash))
     pd.FS.writeFile(target, text)
     done += 1
-    if (done % 25 === 0 || done === files.length) {
+    if (done % 40 === 0 || done === entries.length) {
       post({
         type: 'status',
-        message: `HP-Engine wird gemountet… (${done}/${files.length})`,
+        message: `HP-Engine wird gemountet… (${done}/${entries.length})`,
       })
     }
   }

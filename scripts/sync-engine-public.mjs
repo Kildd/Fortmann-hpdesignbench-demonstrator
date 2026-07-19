@@ -6,6 +6,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const src = path.join(root, 'engine')
 const dest = path.join(root, 'public', 'engine')
 const manifest = []
+const bundle = {}
 
 function copyDir(from, to, prefix = '') {
   fs.mkdirSync(to, { recursive: true })
@@ -26,8 +27,11 @@ function copyDir(from, to, prefix = '') {
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name
     if (entry.isDirectory()) copyDir(a, b, rel)
     else {
-      fs.copyFileSync(a, b)
-      manifest.push(rel.replaceAll('\\', '/'))
+      const text = fs.readFileSync(a, 'utf8')
+      fs.writeFileSync(b, text)
+      const key = rel.replaceAll('\\', '/')
+      manifest.push(key)
+      bundle[key] = text
     }
   }
 }
@@ -35,4 +39,9 @@ function copyDir(from, to, prefix = '') {
 fs.rmSync(dest, { recursive: true, force: true })
 copyDir(src, dest)
 fs.writeFileSync(path.join(dest, 'manifest.json'), JSON.stringify(manifest, null, 2))
-console.log(`Synced engine -> public/engine (${manifest.length} files)`)
+// Single download for the browser worker (avoids flaky multi-file Pages fetches).
+fs.writeFileSync(path.join(dest, 'bundle.json'), JSON.stringify(bundle))
+const bundleKb = Math.round(fs.statSync(path.join(dest, 'bundle.json')).size / 1024)
+console.log(
+  `Synced engine -> public/engine (${manifest.length} files, bundle ${bundleKb} KB)`,
+)
