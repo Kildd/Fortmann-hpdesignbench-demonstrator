@@ -88,7 +88,8 @@ export function createObjectiveChart(el: HTMLElement) {
         stroke: '#434343',
         grid: { stroke: 'rgba(67,67,67,0.12)' },
         ticks: { stroke: 'rgba(67,67,67,0.2)' },
-        font: '11px "IBM Plex Mono", monospace',
+        font: '11px "IBM Plex Sans", "Segoe UI", sans-serif',
+        labelFont: '12px "IBM Plex Sans", "Segoe UI", sans-serif',
         values: (_u, splits) => splits.map((v) => String(Math.round(v))),
       },
       {
@@ -98,7 +99,8 @@ export function createObjectiveChart(el: HTMLElement) {
         stroke: '#434343',
         grid: { stroke: 'rgba(67,67,67,0.12)' },
         ticks: { stroke: 'rgba(67,67,67,0.2)' },
-        font: '11px "IBM Plex Mono", monospace',
+        font: '11px "IBM Plex Sans", "Segoe UI", sans-serif',
+        labelFont: '12px "IBM Plex Sans", "Segoe UI", sans-serif',
         values: (_u, splits) =>
           splits.map((v) =>
             Number.isFinite(v)
