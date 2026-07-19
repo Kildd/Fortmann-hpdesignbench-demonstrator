@@ -128,9 +128,8 @@
           <h3>Vergleich der Entwürfe</h3>
           <p>
             Links ist der aktuelle Entwurf, rechts der beste bisher gefundene zulässige
-            Entwurf dargestellt. Ausnutzungen bis 100&nbsp;% gelten als erfüllt. Nicht
-            zulässige Entwürfe werden intern mit einem Strafterm belegt und nicht als
-            bester zulässiger Entwurf angezeigt.
+            Entwurf dargestellt. Nicht zulässige Entwürfe werden intern mit einem
+            Strafterm belegt und nicht als bester zulässiger Entwurf angezeigt.
           </p>
         </aside>
       </div>
