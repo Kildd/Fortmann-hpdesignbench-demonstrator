@@ -46,15 +46,22 @@ export async function runOptimize(
   onEvent: (ev: OptEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  // Prefer native Python via Vite middleware (fast, identical stack).
-  try {
-    const ok = await runNativeOptimize(req, onEvent, signal)
-    if (ok) return
-  } catch (err) {
-    if (signal?.aborted) throw err
+  // Native Python API exists only under `npm run dev`.
+  if (import.meta.env.DEV) {
+    try {
+      const ok = await runNativeOptimize(req, onEvent, signal)
+      if (ok) return
+    } catch (err) {
+      if (signal?.aborted) throw err
+      onEvent({
+        type: 'status',
+        message: 'Native Engine nicht erreichbar – wechsle zu Pyodide…',
+      })
+    }
+  } else {
     onEvent({
       type: 'status',
-      message: 'Native Engine nicht erreichbar – wechsle zu Pyodide…',
+      message: 'Starte Browser-Engine (Pyodide)…',
     })
   }
 

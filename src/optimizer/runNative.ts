@@ -5,6 +5,7 @@ export async function runNativeOptimize(
   onEvent: (ev: OptEvent) => void,
   signal?: AbortSignal,
 ): Promise<boolean> {
+  // Only available under `npm run dev` (Vite middleware). On GitHub Pages this 404s.
   const res = await fetch('/api/optimize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -13,6 +14,16 @@ export async function runNativeOptimize(
   })
 
   if (!res.ok || !res.body) {
+    return false
+  }
+
+  const contentType = res.headers.get('content-type') || ''
+  if (
+    !contentType.includes('ndjson') &&
+    !contentType.includes('json') &&
+    !contentType.includes('octet-stream')
+  ) {
+    // e.g. GitHub Pages returning HTML for a missing API route
     return false
   }
 
