@@ -9,7 +9,7 @@
     "dev": "vite",
     "prebuild": "node scripts/sync-engine-public.mjs",
     "build": "tsc && vite build",
-    "postbuild": "node -e \"const fs=require('fs');const path=require('path');const cp=(s,d)=>{fs.mkdirSync(d,{recursive:true});for(const e of fs.readdirSync(s,{withFileTypes:true})){const a=path.join(s,e.name),b=path.join(d,e.name);e.isDirectory()?cp(a,b):fs.copyFileSync(a,b)}};fs.rmSync('docs',{recursive:true,force:true});cp('dist','docs');console.log('Copied dist -> docs')\"",
+    "postbuild": "node -e \"const fs=require('fs');const path=require('path');const cp=(s,d)=>{fs.mkdirSync(d,{recursive:true});for(const e of fs.readdirSync(s,{withFileTypes:true})){const a=path.join(s,e.name),b=path.join(d,e.name);e.isDirectory()?cp(a,b):fs.copyFileSync(a,b)}};fs.rmSync('docs',{recursive:true,force:true});cp('dist','docs');fs.writeFileSync('docs/.nojekyll','');console.log('Copied dist -> docs')\"",
     "preview": "vite preview",
     "optimize:smoke": ".venv\\Scripts\\python.exe engine\\demo_optimize.py --n-trials 5"
   },
