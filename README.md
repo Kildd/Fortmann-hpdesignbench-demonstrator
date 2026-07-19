@@ -1,0 +1,59 @@
+# HPDesignBench Demonstrator
+
+Kleines, eigenständiges Web-Demonstrator-Projekt zur **Strukturoptimierung vorgespannter Carbonbeton-HP-Schalen**.
+
+Besucher setzen Eingangsparameter, starten eine **TPE-Optimierung** und sehen live:
+
+- Entwurfsvariablen (best-so-far)
+- Nebenbedingungs-Ausnutzungen
+- Ziele \(y\) und \(y_p\)
+- schematischen **Querschnitt** der besten Lösung bisher
+
+## Unabhängigkeit von HPDesignBench
+
+Dieses Repository enthält eine **eingefrorene Kopie** der benötigten Analysemodule unter `engine/`.  
+Es gibt **kein** Submodul und keinen Laufzeit-Import aus [Kildd/hpdesignbench](https://github.com/Kildd/hpdesignbench).  
+Änderungen am Originalprojekt beeinflussen diese Website nicht, bis die Engine bewusst aktualisiert wird.
+
+## Voraussetzungen
+
+- Node.js 20+
+- Python 3.12+
+
+## Setup
+
+```bash
+npm install
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r engine\requirements-engine.txt
+```
+
+## Lokal starten
+
+```bash
+npm run dev
+```
+
+Öffnen: `http://localhost:5173/`
+
+Der Dev-Server startet die Optimierung über die **native Python-Engine** (`/api/optimize` → `engine/demo_optimize.py`).
+
+## Build / GitHub Pages
+
+```bash
+npm run build
+```
+
+Statische Dateien liegen in `dist/`. GitHub Pages wird über `.github/workflows/pages.yml` aus `dist/` deployed.
+
+Hinweis: Auf GitHub Pages steht kein lokales Python zur Verfügung. Die Seite versucht dann den **Pyodide**-Pfad (langsamer, erster Start lädt Pakete). Für die beste Erfahrung Optimierungen lokal mit `npm run dev` ausführen.
+
+## Engine-Smoke-Test
+
+```bash
+npm run optimize:smoke
+```
+
+## Credits
+
+Analyselogik adaptiert aus dem HPDesignBench-/SlabDesignBench-Ökosystem (Melcer, TU Berlin; Framework-Anteile Dombrowski; Penalty-Formulierung nach Loutfi).

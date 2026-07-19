@@ -1,0 +1,23 @@
+{
+  "name": "fortmann-hpdesignbench-demonstrator",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "sync:engine": "node scripts/sync-engine-public.mjs",
+    "predev": "node scripts/sync-engine-public.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/sync-engine-public.mjs",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "optimize:smoke": ".venv\\Scripts\\python.exe engine\\demo_optimize.py --n-trials 5"
+  },
+  "dependencies": {
+    "uplot": "^1.6.32"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  }
+}
