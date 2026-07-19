@@ -1,0 +1,31 @@
+{
+  "brand": "HPDesignBench Demonstrator",
+  "subtitle": "Strukturoptimierung vorgespannter Carbonbeton-HP-Schalen – live im Browser.",
+  "disclaimer": "Eigenständige Kopie der Analysemethoden. Nicht an das laufende HPDesignBench-Repository gekoppelt.",
+  "vars": {
+    "geom_h_ges_mm": "Bauhöhe H_ges",
+    "geom_t_mm": "Schalendicke t",
+    "geom_nt": "Spanngliedanzahl n_t",
+    "geom_dy_mm": "Randabstand d_y",
+    "mat_conc_fck": "Betonfestigkeit f_ck",
+    "reinf_kap_t_percent": "Vorspannungsgrad",
+    "reinf_a_tex_mm2": "CFRP-Querschnitt A_tex",
+    "geom_t_infill_mm": "Fülldicke",
+    "geom_t_screed_mm": "Estrichdicke"
+  },
+  "constraints": {
+    "A_bending_capacity": "Biegetragfähigkeit",
+    "B1a_deflection_by_wmax_capacity": "Durchbiegung w_max",
+    "B1b_deflection_by_mcr_capacity": "Durchbiegung über M_cr",
+    "B2a_failure_announcement_by_wmin_capacity": "Ankündigung w_min",
+    "B2b_failure_announcement_by_mcr_capacity": "Ankündigung über M_cr",
+    "C1_concrete_cover_capacity": "Betondeckung",
+    "C2_clear_spacing_capacity": "Stababstand",
+    "C3_shell_thickness_capacity": "Min. Schalendicke",
+    "D1_airborne_sound_insulation_capacity": "Luftschall",
+    "D2_impact_sound_insulation_capacity": "Trittschall",
+    "Z1_nt_dt_combination_capacity": "n_t–d_y Kombination",
+    "Z2_beam_theory_H_L_capacity": "Balkentheorie H/L",
+    "Z3_beam_theory_B_L_capacity": "Balkentheorie B/L"
+  }
+}

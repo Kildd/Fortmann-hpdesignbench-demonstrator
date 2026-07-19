@@ -42,9 +42,15 @@ Der Dev-Server startet die Optimierung über die **native Python-Engine** (`/api
 
 ```bash
 npm run build
+# publish folder for Pages:
+# copy dist → docs  (or: Remove-Item -Recurse docs; Copy-Item -Recurse dist docs)
 ```
 
-Statische Dateien liegen in `dist/`. GitHub Pages wird über `.github/workflows/pages.yml` aus `dist/` deployed.
+Die Website wird aus dem Ordner [`docs/`](docs/) auf `main` ausgeliefert:
+
+**GitHub → Settings → Pages → Deploy from a branch → `main` / `/docs`**
+
+Live: https://kildd.github.io/Fortmann-hpdesignbench-demonstrator/
 
 Hinweis: Auf GitHub Pages steht kein lokales Python zur Verfügung. Die Seite versucht dann den **Pyodide**-Pfad (langsamer, erster Start lädt Pakete). Für die beste Erfahrung Optimierungen lokal mit `npm run dev` ausführen.
 

@@ -1,18 +1,14 @@
-name: Deploy GitHub Pages
+name: Build site
+
+# GitHub Pages is served from the committed `docs/` folder on `main`
+# (Settings → Pages → Deploy from a branch → main → /docs).
+# This workflow only verifies that `npm run build` still succeeds.
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
   build:
@@ -25,16 +21,3 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
