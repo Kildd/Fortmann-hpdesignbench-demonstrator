@@ -1,4 +1,4 @@
-# SlabDesignBench – Machbarkeitsdemonstrator
+# SlabDesignBench – Demonstrator
 
 Eigenständiger Web-Demonstrator für die parametrische Bemessung und
 Optimierung einer vorgespannten HP-Schale. Das vorhandene Modell dient als

@@ -10,7 +10,7 @@ export type ChartPoint = {
   bestFeasibleY: number | null
 }
 
-const Y_MAX = 1000
+const Y_MAX = 400
 const X_MIN_SPAN = 10
 const UNIT_CO2 = 'kg CO₂-Äq./m²'
 

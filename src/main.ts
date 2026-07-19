@@ -65,7 +65,7 @@ const app = document.querySelector<HTMLDivElement>('#app')!
 
 app.innerHTML = `
   <header class="hero">
-    <h1 class="brand">SlabDesignBench – Machbarkeitsdemonstrator</h1>
+    <h1 class="brand">SlabDesignBench – Demonstrator</h1>
     <p class="tagline">Vorstudienmodell einer HP-Schale</p>
     <p class="subtitle">
       Dieser Demonstrator zum Förderantrag „SlabDesignBench“ bei der Fritz und
@@ -160,6 +160,10 @@ app.innerHTML = `
           <div class="section-wrap">
             <h2>Aktueller Entwurf</h2>
             <svg id="sectionCurrent"></svg>
+            <h3 class="section-subhead">Zielgröße</h3>
+            <p class="objective-value">
+              <strong id="gwpCurrent">–</strong> ${UNIT_CO2}
+            </p>
             <h3 class="section-subhead">Optimierungsvariablen</h3>
             <div id="statsCurrent" class="section-stats-host"></div>
             <h3 class="section-subhead">Nachweise (Ausnutzung in %)</h3>
@@ -173,6 +177,10 @@ app.innerHTML = `
             </p>
             <div id="bestContent" class="best-content" hidden>
               <svg id="sectionBest"></svg>
+              <h3 class="section-subhead">Zielgröße</h3>
+              <p class="objective-value">
+                <strong id="gwpBest">–</strong> ${UNIT_CO2}
+              </p>
               <h3 class="section-subhead">Optimierungsvariablen</h3>
               <div id="statsBest" class="section-stats-host"></div>
               <h3 class="section-subhead">Nachweise (Ausnutzung in %)</h3>
@@ -210,6 +218,8 @@ const startBtn = document.querySelector<HTMLButtonElement>('#startBtn')!
 const stopBtn = document.querySelector<HTMLButtonElement>('#stopBtn')!
 const objCurrentEl = document.querySelector<HTMLElement>('#objCurrent')!
 const objBestEl = document.querySelector<HTMLElement>('#objBest')!
+const gwpCurrentEl = document.querySelector<HTMLElement>('#gwpCurrent')!
+const gwpBestEl = document.querySelector<HTMLElement>('#gwpBest')!
 const objFeasibleBadge = document.querySelector<HTMLElement>('#objFeasibleBadge')!
 const trialVal = document.querySelector<HTMLElement>('#trialVal')!
 const trialTotal = document.querySelector<HTMLElement>('#trialTotal')!
@@ -232,11 +242,12 @@ drawCrossSection(sectionCurrentEl, null, {
 constraintsCurrentEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
 showBestEmpty()
 
-function fmt(n: number | null | undefined, digits = 2): string {
+/** Objective / GWP values shown to users: one decimal place. */
+function fmtY(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return '–'
   return n.toLocaleString('de-DE', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: digits,
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
   })
 }
 
@@ -268,11 +279,13 @@ function showBestEmpty() {
   bestContent.hidden = true
   constraintsBestEl.innerHTML = ''
   statsBestEl.innerHTML = ''
+  gwpBestEl.textContent = '–'
 }
 
 function showBestDesign(best: BestState) {
   bestPlaceholder.hidden = true
   bestContent.hidden = false
+  gwpBestEl.textContent = fmtY(best.y)
   drawCrossSection(sectionBestEl, best.geometry, {
     idPrefix: 'best',
     ariaLabel: 'Querschnitt bester zulässiger Entwurf',
@@ -380,12 +393,13 @@ function onEvent(ev: OptEvent) {
     const i = ev.trial + 1
     trialVal.textContent = String(i)
     trialTotal.textContent = String(nTrialsTotal || '–')
-    objCurrentEl.textContent = fmt(ev.y)
+    objCurrentEl.textContent = fmtY(ev.y)
+    gwpCurrentEl.textContent = fmtY(ev.y)
     setFeasibleBadge(ev.is_feasible)
 
     const bf = ev.bestFeasible
     if (bf) {
-      objBestEl.textContent = fmt(bf.y)
+      objBestEl.textContent = fmtY(bf.y)
       showBestDesign(bf)
     } else {
       objBestEl.textContent = '–'
@@ -421,8 +435,8 @@ function onEvent(ev: OptEvent) {
     if (stoppedByUser) {
       statusEl.textContent = 'Optimierung gestoppt · Ergebnis vorläufig.'
     } else if (ev.bestFeasible) {
-      statusEl.textContent = `Fertig · bester zulässiger Entwurf: ${fmt(ev.bestFeasible.y)} ${UNIT_CO2}`
-      objBestEl.textContent = fmt(ev.bestFeasible.y)
+      statusEl.textContent = `Fertig · bester zulässiger Entwurf: ${fmtY(ev.bestFeasible.y)} ${UNIT_CO2}`
+      objBestEl.textContent = fmtY(ev.bestFeasible.y)
       showBestDesign(ev.bestFeasible)
       renderConstraints(lastCurrentUtil, ev.bestFeasible.utilizations)
     } else {
@@ -458,6 +472,8 @@ startBtn.addEventListener('click', async () => {
   chart.reset()
   objCurrentEl.textContent = '–'
   objBestEl.textContent = '–'
+  gwpCurrentEl.textContent = '–'
+  gwpBestEl.textContent = '–'
   setFeasibleBadge(null)
   trialVal.textContent = '–'
   trialTotal.textContent = '–'
