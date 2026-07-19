@@ -298,7 +298,9 @@ function onEvent(ev: OptEvent) {
     trialVal.textContent = String(ev.trial + 1)
     // Show the optimizer objective without naming y / y_p.
     objCurrentEl.textContent = fmt(ev.y_p)
-    if (ev.best) objBestEl.textContent = fmt(ev.best.y_p)
+    if (ev.best) {
+      objBestEl.textContent = `${fmt(ev.best.y_p)} (Iteration ${ev.best.trial + 1})`
+    }
 
     drawCrossSection(sectionCurrentEl, ev.geometry, {
       idPrefix: 'cur',
@@ -337,7 +339,7 @@ function onEvent(ev: OptEvent) {
         ariaLabel: 'Querschnitt bestes Ergebnis',
         statsEl: statsBestEl,
       })
-      objBestEl.textContent = fmt(ev.best.y_p)
+      objBestEl.textContent = `${fmt(ev.best.y_p)} (Iteration ${ev.best.trial + 1})`
       trialVal.textContent = String(ev.best.trial + 1)
       renderConstraints(lastCurrentUtil, ev.best.utilizations)
     }
