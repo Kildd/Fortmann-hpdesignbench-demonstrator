@@ -241,8 +241,8 @@ function fmt(n: number | null | undefined, digits = 2): string {
 
 function fmtPct(u: number): string {
   return (u * 100).toLocaleString('de-DE', {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   })
 }
 

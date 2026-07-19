@@ -24,15 +24,22 @@ FEAS_TOL = 1e-9
 
 
 def _is_feasible(util: dict[str, float], err: str | None) -> bool:
-    """True only if every returned constraint utilization is finite and ≤ 1."""
+    """True if every non-modeling constraint utilization is finite and ≤ 1.
+
+    Modeling checks Z1–Z3 are returned by the analysis stack but are hidden in
+    the demonstrator UI and must not block ``bestFeasible`` on their own —
+    otherwise feasible A–D designs are never stored (Z3 is often > 1).
+    """
     if err is not None:
         return False
-    if not util:
-        return False
-    for v in util.values():
+    checked = 0
+    for name, v in util.items():
+        if str(name).startswith("Z"):
+            continue
+        checked += 1
         if not math.isfinite(v) or v > 1.0 + FEAS_TOL:
             return False
-    return True
+    return checked > 0
 
 ENGINE_ROOT = Path(__file__).resolve().parent
 VENDOR_ROOT = ENGINE_ROOT / "vendor"
