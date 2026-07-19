@@ -18,17 +18,6 @@ export function createObjectiveChart(el: HTMLElement) {
 
   let bestValue: number | null = null
 
-  const yRange = (): { min: number; max: number } => {
-    const candidates = [1000]
-    for (const v of data[1]) {
-      if (typeof v === 'number' && Number.isFinite(v)) candidates.push(v * 1.25)
-    }
-    if (bestValue != null && Number.isFinite(bestValue)) {
-      candidates.push(bestValue * 1.25)
-    }
-    return { min: 0, max: Math.max(...candidates) }
-  }
-
   const opts: uPlot.Options = {
     width: el.clientWidth || 480,
     height: 260,
@@ -37,10 +26,7 @@ export function createObjectiveChart(el: HTMLElement) {
       x: { time: false },
       y: {
         auto: false,
-        range: () => {
-          const r = yRange()
-          return [r.min, r.max]
-        },
+        range: [0, 10000],
       },
     },
     series: [
