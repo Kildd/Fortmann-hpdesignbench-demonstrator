@@ -252,11 +252,11 @@ export function drawCrossSection(
   }
 
   const caption = document.createElementNS(NS, 'text')
-  caption.setAttribute('x', String(W - 10))
+  caption.setAttribute('x', '10')
   caption.setAttribute('y', String(H - 8))
-  caption.setAttribute('text-anchor', 'end')
+  caption.setAttribute('text-anchor', 'start')
   caption.setAttribute('fill', '#5a6268')
-  caption.setAttribute('font-size', '11')
+  caption.setAttribute('font-size', '14')
   caption.setAttribute(
     'font-family',
     '"IBM Plex Sans", "Segoe UI", sans-serif',
