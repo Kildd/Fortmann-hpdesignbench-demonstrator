@@ -190,13 +190,6 @@ app.innerHTML = `
             </div>
           </div>
         </section>
-        <aside class="info-box">
-          <h3>Vergleich der Entwürfe</h3>
-          <p>
-            Links ist der aktuelle Entwurf, rechts der beste bisher gefundene zulässige
-            Entwurf dargestellt. Zulässige Entwürfe müssen alle Nachweise erfüllen.
-          </p>
-        </aside>
       </div>
     </main>
   </div>
