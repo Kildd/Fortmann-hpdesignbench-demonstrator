@@ -1,6 +1,6 @@
 import './style.css'
 import { createObjectiveChart } from './chart/objectiveChart'
-import { runOptimize } from './optimizer/runOptimize'
+import { preloadBrowserEngine, runOptimize } from './optimizer/runOptimize'
 import { drawCrossSection } from './section/drawCrossSection'
 import type { BestState, OptEvent, OptimizeRequest } from './types'
 
@@ -273,3 +273,23 @@ stopBtn.addEventListener('click', () => {
   abort?.abort()
   stopBtn.disabled = true
 })
+
+// Warm Pyodide + packages as soon as the page opens (GitHub Pages path).
+if (!import.meta.env.DEV) {
+  startBtn.disabled = true
+  statusEl.textContent = 'Browser-Engine wird vorbereitet…'
+  preloadBrowserEngine((ev) => {
+    if (ev.type === 'status') statusEl.textContent = ev.message
+    if (ev.type === 'error') statusEl.textContent = `Fehler: ${ev.message}`
+  })
+    .then(() => {
+      startBtn.disabled = false
+      statusEl.textContent = 'Bereit.'
+    })
+    .catch((err) => {
+      startBtn.disabled = false
+      statusEl.textContent = `Engine-Vorbereitung fehlgeschlagen: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    })
+}

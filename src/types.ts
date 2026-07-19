@@ -69,7 +69,17 @@ export type StatusEvent = {
   message: string
 }
 
-export type OptEvent = StartEvent | TrialEvent | DoneEvent | ErrorEvent | StatusEvent
+export type ReadyEvent = {
+  type: 'ready'
+}
+
+export type OptEvent =
+  | StartEvent
+  | TrialEvent
+  | DoneEvent
+  | ErrorEvent
+  | StatusEvent
+  | ReadyEvent
 
 export type OptimizeRequest = {
   nTrials: number

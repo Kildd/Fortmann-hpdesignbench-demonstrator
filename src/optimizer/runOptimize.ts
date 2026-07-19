@@ -6,38 +6,105 @@ function assetBase(): string {
   return base.endsWith('/') ? base : `${base}/`
 }
 
+type ReadyEvent = { type: 'ready' }
+type WorkerEvent = OptEvent | ReadyEvent
+
+let sharedWorker: Worker | null = null
+let initPromise: Promise<void> | null = null
+let preloadStatusHandler: ((ev: OptEvent) => void) | null = null
+
+function getWorker(): Worker {
+  if (!sharedWorker) {
+    sharedWorker = new Worker(new URL('./pyodideWorker.ts', import.meta.url), {
+      type: 'module',
+    })
+  }
+  return sharedWorker
+}
+
+/** Start loading Pyodide + packages immediately (page load). */
+export function preloadBrowserEngine(
+  onStatus?: (ev: OptEvent) => void,
+): Promise<void> {
+  if (import.meta.env.DEV) {
+    // Dev path uses native Python; nothing to preload in the browser.
+    return Promise.resolve()
+  }
+  if (initPromise) {
+    if (onStatus) preloadStatusHandler = onStatus
+    return initPromise
+  }
+
+  preloadStatusHandler = onStatus ?? null
+  const worker = getWorker()
+
+  initPromise = new Promise<void>((resolve, reject) => {
+    const onMessage = (ev: MessageEvent<WorkerEvent>) => {
+      const data = ev.data
+      if (data.type === 'status' || data.type === 'error') {
+        preloadStatusHandler?.(data)
+      }
+      if (data.type === 'ready') {
+        worker.removeEventListener('message', onMessage)
+        resolve()
+      }
+      if (data.type === 'error') {
+        worker.removeEventListener('message', onMessage)
+        initPromise = null
+        reject(new Error(data.message))
+      }
+    }
+    worker.addEventListener('message', onMessage)
+    worker.onerror = (e) => {
+      worker.removeEventListener('message', onMessage)
+      initPromise = null
+      reject(e.error ?? new Error(e.message))
+    }
+    worker.postMessage({ cmd: 'init', base: assetBase() })
+  })
+
+  return initPromise
+}
+
 async function runPyodideOptimize(
   req: OptimizeRequest,
   onEvent: (ev: OptEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const worker = new Worker(new URL('./pyodideWorker.ts', import.meta.url), {
-    type: 'module',
-  })
+  await preloadBrowserEngine(onEvent)
+  const worker = getWorker()
 
   await new Promise<void>((resolve, reject) => {
     const onAbort = () => {
+      // Recreate worker after abort so the next run can re-init cleanly.
       worker.terminate()
+      sharedWorker = null
+      initPromise = null
       reject(new DOMException('Aborted', 'AbortError'))
     }
     signal?.addEventListener('abort', onAbort)
 
-    worker.onmessage = (ev: MessageEvent<OptEvent>) => {
-      onEvent(ev.data)
-      if (ev.data.type === 'done' || ev.data.type === 'error') {
-        signal?.removeEventListener('abort', onAbort)
-        worker.terminate()
-        if (ev.data.type === 'error') reject(new Error(ev.data.message))
-        else resolve()
+    const onMessage = (ev: MessageEvent<WorkerEvent>) => {
+      const data = ev.data
+      if (data.type === 'ready') return
+      onEvent(data)
+      if (data.type === 'done') {
+        cleanup()
+        resolve()
+      }
+      if (data.type === 'error') {
+        cleanup()
+        reject(new Error(data.message))
       }
     }
-    worker.onerror = (e) => {
+
+    const cleanup = () => {
       signal?.removeEventListener('abort', onAbort)
-      worker.terminate()
-      reject(e.error ?? new Error(e.message))
+      worker.removeEventListener('message', onMessage)
     }
 
-    worker.postMessage({ req, base: assetBase() })
+    worker.addEventListener('message', onMessage)
+    worker.postMessage({ cmd: 'optimize', req })
   })
 }
 
@@ -46,7 +113,6 @@ export async function runOptimize(
   onEvent: (ev: OptEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  // Native Python API exists only under `npm run dev`.
   if (import.meta.env.DEV) {
     try {
       const ok = await runNativeOptimize(req, onEvent, signal)
@@ -58,11 +124,6 @@ export async function runOptimize(
         message: 'Native Engine nicht erreichbar – wechsle zu Pyodide…',
       })
     }
-  } else {
-    onEvent({
-      type: 'status',
-      message: 'Starte Browser-Engine (Pyodide)…',
-    })
   }
 
   await runPyodideOptimize(req, onEvent, signal)
