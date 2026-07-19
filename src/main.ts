@@ -81,35 +81,56 @@ app.innerHTML = `
   </header>
 
   <div class="layout">
-    <aside class="panel">
-      <h2>Eingaben</h2>
-      <div class="field">
-        <label for="spanMm">Spannweite</label>
-        <select id="spanMm">
-          <option value="5100">5,10 m</option>
-          <option value="6450" selected>6,45 m</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="loadCategory">Nutzlastkategorie nach Eurocode 1</label>
-        <select id="loadCategory">
-          <option value="A2">A2: 1,5 kN/m²</option>
-          <option value="B2" selected>B2: 3,0 kN/m²</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="nTrials">Evaluationsbudget</label>
-        <input id="nTrials" type="number" min="20" max="1000" step="10" value="60" />
-        <p class="hint">Ganzzahl zwischen 20 und 1000</p>
-      </div>
-      <div class="actions">
-        <button class="primary" id="startBtn" type="button">Optimierung starten</button>
-        <button class="ghost" id="stopBtn" type="button" disabled>Stoppen</button>
-      </div>
-      <p class="status" id="status">Bereit.</p>
+    <aside class="panel-stack">
+      <aside class="info-box">
+        <p>
+          Hier wird das zu lösende Optimierungsproblem ausgewählt. In SlabDesignBench
+          wird hier eines der 116.640 zu lösenden Probleme eingestellt. Darüber hinaus
+          kann z.&nbsp;B. eingestellt werden, wie viele Iterationen der
+          Optimierungsalgorithmus ausführen darf.
+        </p>
+      </aside>
+      <aside class="panel">
+        <h2>Eingaben</h2>
+        <div class="field">
+          <label for="spanMm">Spannweite</label>
+          <select id="spanMm">
+            <option value="5100">5,10 m</option>
+            <option value="6450" selected>6,45 m</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="loadCategory">Nutzlastkategorie nach Eurocode 1</label>
+          <select id="loadCategory">
+            <option value="A2">A2: 1,5 kN/m²</option>
+            <option value="B2" selected>B2: 3,0 kN/m²</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="nTrials">Evaluationsbudget</label>
+          <input id="nTrials" type="number" min="20" max="1000" step="10" value="60" />
+          <p class="hint">Ganzzahl zwischen 20 und 1000</p>
+        </div>
+        <div class="actions">
+          <button class="primary" id="startBtn" type="button">Optimierung starten</button>
+          <button class="ghost" id="stopBtn" type="button" disabled>Stoppen</button>
+        </div>
+        <p class="status" id="status">Bereit.</p>
+      </aside>
     </aside>
 
     <main class="stage">
+      <aside class="info-box">
+        <p>
+          Dieser Konvergenzplot stellt den Wert der zu minimierenden Zielfunktion
+          (hier Treibhausgaspotenzial, GWP) über die Iterationen dar. Werte, die über
+          den abgebildeten Wertebereich hinausgehen, sind mit einem kleinen Pfeil nach
+          oben dargestellt. Es ist zu sehen, wie qualitativ hochwertige
+          Zwischenergebnisse in <span class="swatch-blue">blau</span> den insgesamt
+          gefundenen Wert in <span class="swatch-red">rot</span> schrittweise
+          minimieren.
+        </p>
+      </aside>
       <section class="card">
         <h2>Zielfunktion</h2>
         <div class="obj-explain">
@@ -120,6 +141,19 @@ app.innerHTML = `
         <div id="chart"></div>
       </section>
 
+      <aside class="info-box">
+        <p>
+          Hier werden die wichtigsten Informationen zur aktuellen Iteration und der
+          insgesamt besten Iteration dargestellt. Links ist zu sehen, wie sich mit
+          jeder neuen Iteration die Werte der Variablen ändern und somit auch die
+          Ausnutzungen der Nachweise darunter variieren. Der bisher beste Entwurf wird
+          auf der rechten Seite dargestellt. Der Gesamtwert der Zielfunktion eines
+          Entwurfs wird durch die eingesetzten Materialvolumina und die zugehörigen
+          GWP-Werte berechnet. Sind einzelne Nachweise nicht eingehalten
+          (Ausnutzung&nbsp;&gt;&nbsp;100&nbsp;%), wird der Wert der Zielfunktion
+          künstlich erhöht (Penalty-Konzept).
+        </p>
+      </aside>
       <section class="sections-row">
         <div class="section-wrap">
           <h2>Aktuelle Iteration</h2>
