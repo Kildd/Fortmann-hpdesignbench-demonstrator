@@ -98,9 +98,7 @@ async function initEngine(base: string): Promise<void> {
   post({ type: 'status', message: 'HP-Engine wird gemountet…' })
   await mountEngine(base, pd)
 
-  pd.globals.set('js_emit_json', (payload: string) => {
-    post(JSON.parse(payload) as OptEvent)
-  })
+  bindEmitBridge(pd)
 
   // No micropip: structuralcodes is vendored under engine/vendor,
   // TPE is engine/tpe_simple.py (no Optuna).
@@ -117,11 +115,22 @@ import demo_optimize  # noqa: F401
   post({ type: 'ready' } as OptEvent)
 }
 
+/** Expose emit callback on JS globalThis so Python can call it via `from js import …`. */
+function bindEmitBridge(pd: PyodideInterface): void {
+  const emit = (payload: string) => {
+    post(JSON.parse(payload) as OptEvent)
+  }
+  ;(globalThis as unknown as { js_emit_json: (payload: string) => void }).js_emit_json =
+    emit
+  pd.globals.set('js_emit_json', emit)
+}
+
 async function runOptimize(req: OptimizeRequest): Promise<void> {
   if (!pyodide || !ready) throw new Error('Engine nicht initialisiert.')
   if (busy) throw new Error('Optimierung läuft bereits.')
   busy = true
   try {
+    bindEmitBridge(pyodide)
     const nTrials = Number(req.nTrials)
     const omegaGwp = Number(req.omegaGwp)
     const omegaCost = Number(req.omegaCost)
