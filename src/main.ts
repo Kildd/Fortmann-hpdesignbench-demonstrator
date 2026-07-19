@@ -76,7 +76,6 @@ app.innerHTML = `
         <select id="spanMm">
           <option value="5100">5,10 m</option>
           <option value="6450" selected>6,45 m</option>
-          <option value="7900">7,90 m</option>
         </select>
       </div>
       <div class="field">
@@ -84,7 +83,6 @@ app.innerHTML = `
         <select id="loadCategory">
           <option value="A2">A2: 1,5 kN/m²</option>
           <option value="B2" selected>B2: 3,0 kN/m²</option>
-          <option value="T2">T2: 5,0 kN/m²</option>
         </select>
       </div>
       <div class="field">
@@ -115,9 +113,9 @@ app.innerHTML = `
 
       <section class="card">
         <h2>Zielfunktion</h2>
-        <div class="obj-explain" id="objExplain">
-          <p>Unbestrafte Zielfunktion: y = <strong id="yVal">–</strong> ${UNIT_CO2}</p>
-          <p>Bestrafte Zielfunktion: y<sub>p</sub> = <strong id="ypVal">–</strong> ${UNIT_CO2}</p>
+        <div class="obj-explain">
+          <p>Aktuelle Iteration: <strong id="objCurrent">–</strong> ${UNIT_CO2}</p>
+          <p>Bestes Ergebnis aller Iterationen: <strong id="objBest">–</strong> ${UNIT_CO2}</p>
           <p class="obj-trial">Iteration: <strong id="trialVal">–</strong></p>
         </div>
         <div id="chart"></div>
@@ -147,13 +145,14 @@ const statsBestEl = document.querySelector<HTMLElement>('#statsBest')!
 const statusEl = document.querySelector<HTMLElement>('#status')!
 const startBtn = document.querySelector<HTMLButtonElement>('#startBtn')!
 const stopBtn = document.querySelector<HTMLButtonElement>('#stopBtn')!
-const yVal = document.querySelector<HTMLElement>('#yVal')!
-const ypVal = document.querySelector<HTMLElement>('#ypVal')!
+const objCurrentEl = document.querySelector<HTMLElement>('#objCurrent')!
+const objBestEl = document.querySelector<HTMLElement>('#objBest')!
 const trialVal = document.querySelector<HTMLElement>('#trialVal')!
 const constraintsEl = document.querySelector<HTMLElement>('#constraints')!
 const chart = createObjectiveChart(document.querySelector<HTMLElement>('#chart')!)
 
 let abort: AbortController | null = null
+let lastCurrentUtil: Record<string, number> | undefined
 
 drawCrossSection(sectionCurrentEl, null, {
   idPrefix: 'cur',
@@ -169,8 +168,10 @@ constraintsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
 
 function fmt(n: number | null | undefined, digits = 2): string {
   if (n == null || !Number.isFinite(n)) return '–'
-  if (Math.abs(n) >= 1000) return n.toExponential(2)
-  return n.toFixed(digits)
+  return n.toLocaleString('de-DE', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
+  })
 }
 
 function maxUtil(
@@ -185,13 +186,18 @@ function maxUtil(
   return Math.max(...vals)
 }
 
-function renderConstraints(util: Record<string, number> | undefined) {
+function renderConstraintColumn(
+  title: string,
+  util: Record<string, number> | undefined,
+): string {
   if (!util || !Object.keys(util).length) {
-    constraintsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
-    return
+    return `<div class="constraints-col">
+      <h3 class="constraints-col-title">${title}</h3>
+      <p class="empty">Noch keine Auswertung.</p>
+    </div>`
   }
 
-  const html = CONSTRAINT_GROUPS.map((group) => {
+  const groups = CONSTRAINT_GROUPS.map((group) => {
     const rows = group.items
       .map((item) => {
         const u = maxUtil(util, item.key)
@@ -206,13 +212,32 @@ function renderConstraints(util: Record<string, number> | undefined) {
       .join('')
     if (!rows) return ''
     return `<div class="check-group">
-      <h3>${group.title}</h3>
+      <h4>${group.title}</h4>
       ${rows}
     </div>`
   }).join('')
 
-  constraintsEl.innerHTML =
-    html || '<p class="empty">Keine Nachweise in dieser Auswertung.</p>'
+  return `<div class="constraints-col">
+    <h3 class="constraints-col-title">${title}</h3>
+    ${groups || '<p class="empty">Keine Nachweise in dieser Auswertung.</p>'}
+  </div>`
+}
+
+function renderConstraints(
+  current: Record<string, number> | undefined,
+  best: Record<string, number> | undefined,
+) {
+  if (
+    (!current || !Object.keys(current).length) &&
+    (!best || !Object.keys(best).length)
+  ) {
+    constraintsEl.innerHTML = '<p class="empty">Noch keine Auswertung.</p>'
+    return
+  }
+  constraintsEl.innerHTML = `<div class="constraints-dual">
+    ${renderConstraintColumn('Aktuelle Iteration', current)}
+    ${renderConstraintColumn('Bestes Ergebnis aller Iterationen', best)}
+  </div>`
 }
 
 function onEvent(ev: OptEvent) {
@@ -231,8 +256,9 @@ function onEvent(ev: OptEvent) {
   }
   if (ev.type === 'trial') {
     trialVal.textContent = String(ev.trial + 1)
-    if (ev.y != null) yVal.textContent = fmt(ev.y)
-    if (ev.y_p != null) ypVal.textContent = fmt(ev.y_p)
+    // Show the optimizer objective without naming y / y_p.
+    objCurrentEl.textContent = fmt(ev.y_p)
+    if (ev.best) objBestEl.textContent = fmt(ev.best.y_p)
 
     drawCrossSection(sectionCurrentEl, ev.geometry, {
       idPrefix: 'cur',
@@ -242,10 +268,8 @@ function onEvent(ev: OptEvent) {
 
     chart.push({
       trial: ev.trial,
-      y: ev.y,
-      y_p: ev.y_p,
-      bestY: ev.best?.y ?? null,
-      bestYp: ev.best?.y_p ?? null,
+      current: ev.y_p,
+      best: ev.best?.y_p ?? null,
     })
 
     if (ev.best) {
@@ -254,8 +278,10 @@ function onEvent(ev: OptEvent) {
         ariaLabel: 'Querschnitt bestes Ergebnis',
         statsEl: statsBestEl,
       })
-      renderConstraints(ev.best.utilizations)
     }
+    renderConstraints(ev.utilizations, ev.best?.utilizations)
+    lastCurrentUtil = ev.utilizations
+
     statusEl.textContent = ev.is_best
       ? `Iteration ${ev.trial + 1} · neues bestes Ergebnis`
       : `Iteration ${ev.trial + 1}`
@@ -263,7 +289,7 @@ function onEvent(ev: OptEvent) {
   }
   if (ev.type === 'done') {
     statusEl.textContent = ev.best
-      ? `Fertig · bestes y_p = ${fmt(ev.best.y_p)} ${UNIT_CO2} (Iteration ${ev.best.trial + 1})`
+      ? `Fertig · bestes Ergebnis = ${fmt(ev.best.y_p)} ${UNIT_CO2} (Iteration ${ev.best.trial + 1})`
       : 'Fertig · keine gültige Lösung'
     if (ev.best) {
       drawCrossSection(sectionBestEl, ev.best.geometry, {
@@ -271,10 +297,9 @@ function onEvent(ev: OptEvent) {
         ariaLabel: 'Querschnitt bestes Ergebnis',
         statsEl: statsBestEl,
       })
-      renderConstraints(ev.best.utilizations)
-      if (ev.best.y != null) yVal.textContent = fmt(ev.best.y)
-      if (ev.best.y_p != null) ypVal.textContent = fmt(ev.best.y_p)
+      objBestEl.textContent = fmt(ev.best.y_p)
       trialVal.textContent = String(ev.best.trial + 1)
+      renderConstraints(lastCurrentUtil, ev.best.utilizations)
     }
   }
 }
@@ -301,9 +326,10 @@ startBtn.addEventListener('click', async () => {
   startBtn.disabled = true
   stopBtn.disabled = false
   chart.reset()
-  yVal.textContent = '–'
-  ypVal.textContent = '–'
+  objCurrentEl.textContent = '–'
+  objBestEl.textContent = '–'
   trialVal.textContent = '–'
+  lastCurrentUtil = undefined
   statusEl.textContent = 'Starte Optimierung…'
   drawCrossSection(sectionCurrentEl, null, {
     idPrefix: 'cur',

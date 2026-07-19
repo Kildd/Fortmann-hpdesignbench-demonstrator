@@ -3,10 +3,10 @@ import 'uplot/dist/uPlot.min.css'
 
 export type ChartPoint = {
   trial: number
-  y: number | null
-  y_p: number | null
-  bestY: number | null
-  bestYp: number | null
+  /** Objective value of the current iteration (optimizer metric). */
+  current: number | null
+  /** Best-so-far objective value. */
+  best: number | null
 }
 
 export function createObjectiveChart(el: HTMLElement) {
@@ -16,19 +16,23 @@ export function createObjectiveChart(el: HTMLElement) {
     (number | null | undefined)[],
   ] = [[], [], []]
 
-  let bestY: number | null = null
-  let bestYp: number | null = null
+  let bestValue: number | null = null
 
   const yRange = (): { min: number; max: number } => {
     const candidates = [1000]
-    if (bestY != null && Number.isFinite(bestY)) candidates.push(bestY * 1.25)
-    if (bestYp != null && Number.isFinite(bestYp)) candidates.push(bestYp * 1.25)
+    for (const v of data[1]) {
+      if (typeof v === 'number' && Number.isFinite(v)) candidates.push(v * 1.25)
+    }
+    if (bestValue != null && Number.isFinite(bestValue)) {
+      candidates.push(bestValue * 1.25)
+    }
     return { min: 0, max: Math.max(...candidates) }
   }
 
   const opts: uPlot.Options = {
     width: el.clientWidth || 480,
-    height: 220,
+    height: 260,
+    padding: [8, 12, 8, 8],
     scales: {
       x: { time: false },
       y: {
@@ -42,13 +46,13 @@ export function createObjectiveChart(el: HTMLElement) {
     series: [
       {},
       {
-        label: 'y (unbestraft)',
+        label: 'Aktuelle Iteration',
         stroke: '#1f91cc',
         width: 2,
         points: { show: false },
       },
       {
-        label: 'y_p (bestraft, best)',
+        label: 'Bestes Ergebnis',
         stroke: '#c40d20',
         width: 2,
         points: { show: false },
@@ -56,26 +60,37 @@ export function createObjectiveChart(el: HTMLElement) {
     ],
     axes: [
       {
+        label: 'Iteration',
+        labelSize: 18,
         stroke: '#434343',
         grid: { stroke: 'rgba(67,67,67,0.12)' },
         ticks: { stroke: 'rgba(67,67,67,0.2)' },
         font: '11px "IBM Plex Mono", monospace',
+        values: (_u, splits) => splits.map((v) => String(Math.round(v))),
       },
       {
+        label: 'kg CO₂-äquivalent/m²',
+        labelSize: 18,
+        size: 72,
         stroke: '#434343',
         grid: { stroke: 'rgba(67,67,67,0.12)' },
         ticks: { stroke: 'rgba(67,67,67,0.2)' },
         font: '11px "IBM Plex Mono", monospace',
-        size: 56,
+        values: (_u, splits) =>
+          splits.map((v) =>
+            Number.isFinite(v)
+              ? v.toLocaleString('de-DE', { maximumFractionDigits: 0 })
+              : '',
+          ),
       },
     ],
     legend: { show: true },
   }
 
-  let plot = new uPlot(opts, data, el)
+  const plot = new uPlot(opts, data, el)
 
   const resize = () => {
-    plot.setSize({ width: el.clientWidth || 480, height: 220 })
+    plot.setSize({ width: el.clientWidth || 480, height: 260 })
   }
   window.addEventListener('resize', resize)
 
@@ -84,17 +99,14 @@ export function createObjectiveChart(el: HTMLElement) {
       data[0] = []
       data[1] = []
       data[2] = []
-      bestY = null
-      bestYp = null
+      bestValue = null
       plot.setData(data)
     },
     push(p: ChartPoint) {
-      if (p.bestY != null && Number.isFinite(p.bestY)) bestY = p.bestY
-      if (p.bestYp != null && Number.isFinite(p.bestYp)) bestYp = p.bestYp
-      data[0].push(p.trial)
-      data[1].push(p.y)
-      // Step series: current best y_p (readable scale follows improvements)
-      data[2].push(bestYp)
+      if (p.best != null && Number.isFinite(p.best)) bestValue = p.best
+      data[0].push(p.trial + 1)
+      data[1].push(p.current)
+      data[2].push(bestValue)
       plot.setData(data)
     },
     destroy() {

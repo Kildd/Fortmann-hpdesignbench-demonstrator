@@ -100,7 +100,7 @@ function renderStats(el: HTMLElement | null | undefined, g: GeometryState | null
     ['Querschnittsdicke', Number.isFinite(t) ? `${fmtVal(t, 0)} mm` : '–'],
     [
       'Anzahl Spannglieder',
-      Number.isFinite(nt) ? `${nt} je Seite (Σ ${2 * nt})` : '–',
+      Number.isFinite(nt) ? `${nt} je Seite` : '–',
     ],
     ['Randabstand Spannglieder', Number.isFinite(dy) ? `${fmtVal(dy, 0)} mm` : '–'],
     ['Betongüte', Number.isFinite(fck) ? `C${fmtVal(fck, 0)}` : '–'],

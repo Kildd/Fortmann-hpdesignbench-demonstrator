@@ -312,10 +312,32 @@ button:disabled {
   margin-bottom: 0;
 }
 
-.check-group h3 {
+.check-group h3,
+.check-group h4 {
   margin: 0 0 0.4rem;
   font-size: 0.88rem;
   font-weight: 600;
+}
+
+.constraints-dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .constraints-dual {
+    grid-template-columns: 1fr;
+  }
+}
+
+.constraints-col-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .check-row {
