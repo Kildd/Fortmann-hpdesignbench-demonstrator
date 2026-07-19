@@ -16,15 +16,30 @@ import io
 import json
 import sys
 import traceback
+import types
 from pathlib import Path
 from typing import Any
 
-import optuna
-from optuna.samplers import TPESampler
-
 ENGINE_ROOT = Path(__file__).resolve().parent
-if str(ENGINE_ROOT) not in sys.path:
-    sys.path.insert(0, str(ENGINE_ROOT))
+VENDOR_ROOT = ENGINE_ROOT / "vendor"
+
+# structuralcodes imports triangle at module import time; stub before any analysis import.
+if "triangle" not in sys.modules:
+    try:
+        import triangle as _triangle_mod  # noqa: F401
+    except Exception:
+        _tri = types.ModuleType("triangle")
+        _tri.__hp_stub__ = True  # type: ignore[attr-defined]
+
+        def _triangulate(*_args: Any, **_kwargs: Any) -> Any:
+            raise RuntimeError("triangle is not available in this environment")
+
+        _tri.triangulate = _triangulate  # type: ignore[attr-defined]
+        sys.modules["triangle"] = _tri
+
+for _p in (str(VENDOR_ROOT), str(ENGINE_ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from core.ioh_core.import_specs import (  # noqa: E402
     build_space,
@@ -38,6 +53,8 @@ from slab_construction.slabs.hp_slab.analysis import (  # noqa: E402
     analysis,
     resolve_active_constraints,
 )
+from integrator_util import section_integrator  # noqa: E402
+from tpe_simple import IntegerTPE  # noqa: E402
 
 HP_DIR = ENGINE_ROOT / "slab_construction" / "slabs" / "hp_slab"
 
@@ -142,7 +159,6 @@ def build_problem(
     decode = make_decode(model, var_names)
     materials = load_materials_registry(HP_DIR / "materials.csv")
 
-    # Resolve active constraints from fixed params (SLS case etc.)
     seed_params = decode([(a + b) // 2 for a, b in zip(lb, ub)])
     constraints = resolve_active_constraints(seed_params, info["constraints"])
 
@@ -155,6 +171,68 @@ def build_problem(
         "materials": materials,
         "constraints": constraints,
     }
+
+
+def _evaluate_one(
+    x: list[int],
+    *,
+    trial: int,
+    var_names: list[str],
+    decode: Any,
+    materials: dict,
+    constraints: dict,
+    best: dict[str, Any] | None,
+) -> tuple[float, dict[str, Any], dict[str, Any] | None]:
+    params = decode(x)
+    try:
+        sink = io.StringIO()
+        with contextlib.redirect_stdout(sink):
+            result = analysis(params, constraints, materials, debug=False)
+        y = float(result["y"])
+        y_p = float(result["y_p"])
+        penalties = {k: float(v) for k, v in result["penalties_"].items()}
+        util = {k: float(v) for k, v in result["constraint_values"].items()}
+        err = None
+    except Exception as exc:  # noqa: BLE001 — keep optimizer alive
+        y = float("inf")
+        y_p = float("inf")
+        penalties = {}
+        util = {}
+        err = f"{type(exc).__name__}: {exc}"
+        params = dict(params)
+
+    decoded_vars = {name: params.get(name) for name in var_names}
+    payload: dict[str, Any] = {
+        "type": "trial",
+        "trial": trial,
+        "x": x,
+        "vars": decoded_vars,
+        "y": y if y != float("inf") else None,
+        "y_p": y_p if y_p != float("inf") else None,
+        "penalties": penalties,
+        "utilizations": util,
+        "error": err,
+        "geometry": _geometry_payload(params),
+    }
+
+    is_best = best is None or (y_p < best["y_p"])
+    if is_best and y_p != float("inf"):
+        best = {
+            "trial": trial,
+            "y": y,
+            "y_p": y_p,
+            "vars": decoded_vars,
+            "penalties": penalties,
+            "utilizations": util,
+            "geometry": payload["geometry"],
+        }
+        payload["is_best"] = True
+        payload["best"] = best
+    else:
+        payload["is_best"] = False
+        payload["best"] = best
+
+    return y_p, payload, best
 
 
 def run_tpe(
@@ -182,82 +260,38 @@ def run_tpe(
             "constraint_labels": CONSTRAINT_LABELS_DE,
             "omega_gwp": omega_gwp,
             "omega_cost": omega_cost,
-            # HP sections are built with structuralcodes BeamSection(..., integrator="fiber")
-            "integrator": "fiber",
+            "integrator": section_integrator(),
+            "sampler": "tpe_simple",
         }
     )
 
+    sampler = IntegerTPE(
+        bounds=list(zip(lb, ub)),
+        seed=seed,
+        n_startup=min(10, max(3, n_trials // 5)),
+    )
     best: dict[str, Any] | None = None
-    sampler = TPESampler(seed=seed)
-    study = optuna.create_study(direction="minimize", sampler=sampler)
-    optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-    def objective(trial: optuna.Trial) -> float:
-        nonlocal best
-        x = [
-            trial.suggest_int(name, lo, hi)
-            for name, lo, hi in zip(var_names, lb, ub)
-        ]
-        params = decode(x)
-        try:
-            sink = io.StringIO()
-            with contextlib.redirect_stdout(sink):
-                result = analysis(params, constraints, materials, debug=False)
-            y = float(result["y"])
-            y_p = float(result["y_p"])
-            penalties = {k: float(v) for k, v in result["penalties_"].items()}
-            util = {k: float(v) for k, v in result["constraint_values"].items()}
-            err = None
-        except Exception as exc:  # noqa: BLE001 — keep optimizer alive
-            y = float("inf")
-            y_p = float("inf")
-            penalties = {}
-            util = {}
-            err = f"{type(exc).__name__}: {exc}"
-            params = dict(params)
-
-        decoded_vars = {name: params.get(name) for name in var_names}
-        payload = {
-            "type": "trial",
-            "trial": trial.number,
-            "x": x,
-            "vars": decoded_vars,
-            "y": y if y != float("inf") else None,
-            "y_p": y_p if y_p != float("inf") else None,
-            "penalties": penalties,
-            "utilizations": util,
-            "error": err,
-            "geometry": _geometry_payload(params),
-        }
-
-        is_best = best is None or (y_p < best["y_p"])
-        if is_best and y_p != float("inf"):
-            best = {
-                "trial": trial.number,
-                "y": y,
-                "y_p": y_p,
-                "vars": decoded_vars,
-                "penalties": penalties,
-                "utilizations": util,
-                "geometry": payload["geometry"],
-            }
-            payload["is_best"] = True
-            payload["best"] = best
-        else:
-            payload["is_best"] = False
-            payload["best"] = best
-
+    for trial in range(n_trials):
+        x = sampler.ask()
+        y_p, payload, best = _evaluate_one(
+            x,
+            trial=trial,
+            var_names=var_names,
+            decode=decode,
+            materials=materials,
+            constraints=constraints,
+            best=best,
+        )
+        sampler.tell(x, y_p)
         _emit(payload)
-        return y_p
-
-    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
 
     _emit(
         {
             "type": "done",
             "best": best,
             "n_trials": n_trials,
-            "best_value": study.best_value if best else None,
+            "best_value": best["y_p"] if best else None,
         }
     )
 

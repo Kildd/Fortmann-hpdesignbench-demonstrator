@@ -1894,10 +1894,12 @@ def sls_section_EC(
     for pg in geo.point_geometries:
         processed_geoms.append(pg) # keep same reinforcement material
 
+    from integrator_util import section_integrator
+
     new_sls_section = BeamSection(
         CompoundGeometry(geometries=processed_geoms),
         name=section.name,
-        integrator="fiber",
+        integrator=section_integrator(),
         mesh_size=0.01,
     )
 
@@ -1931,10 +1933,12 @@ def flipped_section(section: BeamSection) -> BeamSection:
         point=centroid,
         use_radians=False)
 
+    from integrator_util import section_integrator
+
     rotated_section = BeamSection(
         flipped_support_section_geometry,
         name=f"{section.name} (Support)",
-        integrator="fiber",
+        integrator=section_integrator(),
         mesh_size=0.01,
     )
 

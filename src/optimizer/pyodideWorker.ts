@@ -54,11 +54,19 @@ async function mountEngine(base: string, pd: PyodideInterface): Promise<void> {
   }
   const files = (await res.json()) as string[]
   pd.FS.mkdirTree('/home/pyodide/engine')
+  let done = 0
   for (const rel of files) {
     const text = await fetchText(`${base}engine/${rel}`)
     const target = `/home/pyodide/engine/${rel}`
     pd.FS.mkdirTree(target.slice(0, target.lastIndexOf('/')))
     pd.FS.writeFile(target, text)
+    done += 1
+    if (done % 25 === 0 || done === files.length) {
+      post({
+        type: 'status',
+        message: `HP-Engine wird gemountet… (${done}/${files.length})`,
+      })
+    }
   }
 }
 
@@ -67,7 +75,7 @@ async function initEngine(base: string): Promise<void> {
   const pd = await getPyodide()
 
   post({ type: 'status', message: 'NumPy / SciPy / Shapely…' })
-  await pd.loadPackage(['numpy', 'scipy', 'shapely', 'micropip', 'sqlite3'])
+  await pd.loadPackage(['numpy', 'scipy', 'shapely'])
 
   post({ type: 'status', message: 'HP-Engine wird gemountet…' })
   await mountEngine(base, pd)
@@ -76,26 +84,14 @@ async function initEngine(base: string): Promise<void> {
     post(JSON.parse(payload) as OptEvent)
   })
 
-  post({ type: 'status', message: 'Python-Pakete (structuralcodes, Optuna)…' })
-  // triangle has no Pyodide wheel — stub it, then install structuralcodes WITHOUT deps.
+  // No micropip: structuralcodes is vendored under engine/vendor,
+  // TPE is engine/tpe_simple.py (no Optuna).
+  post({ type: 'status', message: 'Python-Module werden vorgewärmt…' })
   await pd.runPythonAsync(`
-import sys, types
-
-if 'triangle' not in sys.modules:
-    tri = types.ModuleType('triangle')
-    def _triangulate(*args, **kwargs):
-        raise RuntimeError('triangle nicht in Pyodide verfügbar')
-    tri.triangulate = _triangulate
-    sys.modules['triangle'] = tri
-
-import micropip
-# structuralcodes declares triangle as dependency; skip deps and use our stub + pyodide shapely/numpy/scipy.
-await micropip.install('structuralcodes==0.7.1', deps=False)
-await micropip.install(['optuna==4.2.1', 'tabulate==0.9.0'])
-
 import sys
+sys.path.insert(0, '/home/pyodide/engine/vendor')
 sys.path.insert(0, '/home/pyodide/engine')
-import demo_optimize  # noqa: F401 — warm import
+import demo_optimize  # noqa: F401
 `)
 
   ready = true

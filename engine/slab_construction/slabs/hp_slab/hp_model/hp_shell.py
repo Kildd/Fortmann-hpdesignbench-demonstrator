@@ -19,6 +19,7 @@ from structuralcodes.materials.concrete import Concrete
 from structuralcodes.materials.reinforcement import Reinforcement
 from structuralcodes.sections import BeamSection
 
+from integrator_util import section_integrator
 from slab_construction.slabs.hp_slab.hp_model.hp_geometry import HPGeometry
 
 
@@ -134,13 +135,14 @@ class HPShell:
                 self.reinforcement  # reinforcement material
             )
 
+        integ = section_integrator()
         if name is None:
             hp_section = BeamSection(
-                hp_geometry, name=self.name, integrator="fiber", mesh_size=0.01
+                hp_geometry, name=self.name, integrator=integ, mesh_size=0.01
             )
         else:
             hp_section = BeamSection(
-                hp_geometry, name=name, integrator="fiber", mesh_size=0.01
+                hp_geometry, name=name, integrator=integ, mesh_size=0.01
             )
 
         return hp_section
