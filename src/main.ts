@@ -197,7 +197,14 @@ app.innerHTML = `
   <footer class="footer">
     <p>
       Vorstudie: Fachgebiet Entwerfen und Konstruieren – Massivbau, Technische
-      Universität Berlin. Kontakt:
+      Universität Berlin.
+    </p>
+    <p>
+      Projektantrag: Fachgebiet Tragwerkskonstruktionen des Hochbaus, Technische
+      Universität Berlin.
+    </p>
+    <p>
+      Kontakt:
       <a href="mailto:m.dombrowski@tu-berlin.de">m.dombrowski@tu-berlin.de</a>
     </p>
   </footer>

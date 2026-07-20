@@ -590,6 +590,10 @@ td.mono,
   max-width: 52rem;
 }
 
+.footer p {
+  margin: 0.15rem 0;
+}
+
 .footer a {
   color: var(--ink);
 }
